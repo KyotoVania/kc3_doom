@@ -1,0 +1,143 @@
+load("kc3/data.kc3")
+
+defmodule Check do
+
+  def t = fn (ok, desc) {
+    if (ok) do
+      (U64) 0
+    else
+      puts("FAIL #{desc}")
+      (U64) 1
+    end
+  }
+
+end
+
+defmodule MapCheck do
+
+  def count_char = fn (str, byte) {
+    MapCheck.count_char_i(str, byte, (Uw) 0)
+  }
+
+  def count_char_i = fn (str, byte, i) {
+    if (i >= (Uw) Str.size(str)) do
+      (U64) 0
+    else
+      n = if (Str.char(str, i) == byte) do (U64) 1 else (U64) 0 end
+      (U64) (n + MapCheck.count_char_i(str, byte, (Uw) (i + 1)))
+    end
+  }
+
+  def count_char_map = fn {
+    ([], _) { (U64) 0 }
+    ([row | rest], byte) {
+      (U64) (MapCheck.count_char(row, byte) +
+             MapCheck.count_char_map(rest, byte))
+    }
+  }
+
+  def rect = fn {
+    ([], _) { true }
+    ([row | rest], w) {
+      (Str.size(row) == w) && MapCheck.rect(rest, w)
+    }
+  }
+
+  def full_row = fn (row) {
+    MapCheck.count_char(row, (U8) 46) == (U64) 0
+  }
+
+  def border_cols = fn {
+    ([], _) { true }
+    ([row | rest], last) {
+      (Str.char(row, (Uw) 0) != (U8) 46) &&
+      (Str.char(row, last) != (U8) 46) &&
+      MapCheck.border_cols(rest, last)
+    }
+  }
+
+  def valid = fn (map) {
+    first_row = List.first(map)
+    w = Str.size(first_row)
+    last_col = (Uw) ((Uw) w - 1)
+    MapCheck.rect(map, w) &&
+    MapCheck.full_row(first_row) &&
+    MapCheck.full_row(List.last(map)) &&
+    MapCheck.border_cols(map, last_col) &&
+    (MapCheck.count_char_map(map, (U8) 80) == (U64) 1) &&
+    (MapCheck.count_char_map(map, (U8) 84) == (U64) 1) &&
+    (MapCheck.count_char_map(map, (U8) 88) == (U64) 1)
+  }
+
+end
+
+fails = (U64) 0
+
+fails = (U64) (fails + Check.t(DoomTex.bproj == (U32) 46,
+  "DoomTex.bproj"))
+fails = (U64) (fails + Check.t(DoomTex.count == (U32) 47,
+  "DoomTex.count"))
+fails = (U64) (fails + Check.t(DoomTex.floor(:carpet) ==
+  DoomTex.floor_carpet, "DoomTex.floor(:carpet)"))
+fails = (U64) (fails + Check.t(DoomMobTex.walk(:race, 1) ==
+  DoomTex.race_walk_1, "DoomMobTex.walk(:race, 1)"))
+fails = (U64) (fails + Check.t(DoomMobTex.atk(:boss) ==
+  DoomTex.boss_atk, "DoomMobTex.atk(:boss)"))
+fails = (U64) (fails + Check.t(DoomMobTex.dead(:free1) ==
+  DoomTex.free1_dead, "DoomMobTex.dead(:free1)"))
+
+boss = DoomTypes.get(:boss)
+fails = (U64) (fails + Check.t(boss.hp == (F64) 900.0,
+  "DoomTypes.get(:boss).hp"))
+fails = (U64) (fails + Check.t(boss.burst == (U8) 5,
+  "DoomTypes.get(:boss).burst"))
+fails = (U64) (fails + Check.t(boss.no_pain,
+  "DoomTypes.get(:boss).no_pain"))
+leak = DoomTypes.get(:leak)
+fails = (U64) (fails + Check.t(leak.melee,
+  "DoomTypes.get(:leak).melee"))
+
+weapons = ^ DoomWeapons.all
+fails = (U64) (fails + Check.t((U64) List.length(weapons) == (U64) 3,
+  "DoomWeapons.all count"))
+[w1, w2, w3] = ^ weapons
+fails = (U64) (fails + Check.t(w2.name == "gdb",
+  "DoomWeapons.all[2].name"))
+fails = (U64) (fails + Check.t(w2.pellets == (U8) 7,
+  "DoomWeapons.all[2].pellets"))
+
+tips = ^ DoomTips.all
+fails = (U64) (fails + Check.t((U64) List.length(tips) == (U64) 12,
+  "DoomTips.all count"))
+fails = (U64) (fails + Check.t(Str.has_str?(List.first(tips),
+  "unquote"), "DoomTips.all first unquote"))
+
+item_f = DoomItems.get("f")
+{item_tex, item_scale, item_lift} = ^ item_f
+fails = (U64) (fails + Check.t(item_tex == DoomTex.item_fact,
+  "DoomItems.get(f) tex"))
+fails = (U64) (fails + Check.t(item_lift == (F64) 0.25,
+  "DoomItems.get(f) lift"))
+fails = (U64) (fails + Check.t(DoomItems.get("x") == void,
+  "DoomItems.get(x) void"))
+
+fails = (U64) (fails + Check.t(DoomMobChars.get("B") == :boss,
+  "DoomMobChars.get(B)"))
+
+levels = ^ DoomLevels.all
+fails = (U64) (fails + Check.t((U64) List.length(levels) == (U64) 3,
+  "DoomLevels.all count"))
+fails = (U64) (fails + Check.t(DoomLevels.count == (U8) 3,
+  "DoomLevels.count"))
+[l1, l2, l3] = ^ levels
+fails = (U64) (fails + Check.t(MapCheck.valid(l1.map), "E1M1 map"))
+fails = (U64) (fails + Check.t(MapCheck.valid(l2.map), "E1M2 map"))
+fails = (U64) (fails + Check.t(MapCheck.valid(l3.map), "E1M3 map"))
+fails = (U64) (fails + Check.t(MapCheck.count_char_map(l3.map,
+  (U8) 66) >= (U64) 1, "E1M3 map has B"))
+
+if (fails == (U64) 0) do
+  puts("data_test: OK")
+else
+  puts("data_test: #{fails} failure(s)")
+end
