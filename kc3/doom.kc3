@@ -1,0 +1,67 @@
+defmodule DoomState do
+
+  defstruct [w: (U32) 400,
+             h: (U32) 250,
+             px: (F64) 3.5,
+             py: (F64) 3.5,
+             pa: (F64) 0.0,
+             t: (F64) 0.0,
+             frames: (U64) 0,
+             msg: "KMX DOOM : fleches pour bouger, Echap pour quitter"]
+
+end
+
+defmodule Doom do
+
+  def key_left = (U32) 65361
+
+  def key_up = (U32) 65362
+
+  def key_right = (U32) 65363
+
+  def key_down = (U32) 65364
+
+  def init = fn (w, h) {
+    %DoomState{w: w, h: h}
+  }
+
+  def update = fn (s, dt) {
+    %DoomState{s | t: s.t + dt, frames: (U64) (s.frames + 1)}
+  }
+
+  def step = fn (s, sign) {
+    k = sign * (F64) 0.25
+    %DoomState{s | px: s.px + F64.cos(s.pa) * k,
+              py: s.py + F64.sin(s.pa) * k}
+  }
+
+  def key = fn (s, keysym) {
+    if (keysym == Doom.key_left) do
+      %DoomState{s | pa: s.pa - (F64) 0.1}
+    else
+      if (keysym == Doom.key_right) do
+        %DoomState{s | pa: s.pa + (F64) 0.1}
+      else
+        if (keysym == Doom.key_up) do
+          Doom.step(s, (F64) 1.0)
+        else
+          if (keysym == Doom.key_down) do
+            Doom.step(s, (F64) -1.0)
+          else
+            %DoomState{s | msg: "touche #{keysym}"}
+          end
+        end
+      end
+    end
+  }
+
+  def button = fn (s, button, x, y) {
+    %DoomState{s | msg: "clic #{button} (#{x}, #{y})"}
+  }
+
+  def view = fn (s) {
+    {s.px, s.py, F64.cos(s.pa), F64.sin(s.pa),
+     "#{s.msg}  |  frame #{s.frames}  t=#{s.t}"}
+  }
+
+end

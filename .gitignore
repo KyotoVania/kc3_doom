@@ -1,0 +1,5 @@
+config.mk
+kmx_doom
+src/*.o
+*.kc3c
+*.core
