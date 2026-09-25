@@ -1,0 +1,436 @@
+defmodule DoomTex do
+
+  def wall_1 = (U32) 0
+
+  def wall_2 = (U32) 1
+
+  def wall_3 = (U32) 2
+
+  def wall_4 = (U32) 3
+
+  def wall_5 = (U32) 4
+
+  def wall_6 = (U32) 5
+
+  def wall_d = (U32) 6
+
+  def wall_x = (U32) 7
+
+  def floor_tile = (U32) 8
+
+  def floor_grate = (U32) 9
+
+  def floor_carpet = (U32) 10
+
+  def floor_panel = (U32) 11
+
+  def floor_dark = (U32) 12
+
+  def segv_walk_0 = (U32) 13
+
+  def segv_walk_1 = (U32) 14
+
+  def segv_atk = (U32) 15
+
+  def segv_dead = (U32) 16
+
+  def leak_walk_0 = (U32) 17
+
+  def leak_walk_1 = (U32) 18
+
+  def leak_atk = (U32) 19
+
+  def leak_dead = (U32) 20
+
+  def race_walk_0 = (U32) 21
+
+  def race_walk_1 = (U32) 22
+
+  def race_atk = (U32) 23
+
+  def race_dead = (U32) 24
+
+  def dfree_walk_0 = (U32) 25
+
+  def dfree_walk_1 = (U32) 26
+
+  def dfree_atk = (U32) 27
+
+  def dfree_dead = (U32) 28
+
+  def free1_walk_0 = (U32) 29
+
+  def free1_walk_1 = (U32) 30
+
+  def free1_atk = (U32) 31
+
+  def free1_dead = (U32) 32
+
+  def boss_walk_0 = (U32) 33
+
+  def boss_walk_1 = (U32) 34
+
+  def boss_atk = (U32) 35
+
+  def boss_dead = (U32) 36
+
+  def thomas_0 = (U32) 37
+
+  def thomas_1 = (U32) 38
+
+  def item_coffee = (U32) 39
+
+  def item_ammo = (U32) 40
+
+  def item_fact = (U32) 41
+
+  def item_gdb = (U32) 42
+
+  def item_asan = (U32) 43
+
+  def item_armor = (U32) 44
+
+  def proj = (U32) 45
+
+  def bproj = (U32) 46
+
+  def count = (U32) 47
+
+  def floor = fn {
+    (:tile) { DoomTex.floor_tile }
+    (:grate) { DoomTex.floor_grate }
+    (:carpet) { DoomTex.floor_carpet }
+    (:panel) { DoomTex.floor_panel }
+    (:dark) { DoomTex.floor_dark }
+  }
+
+end
+
+defmodule DoomMobTex do
+
+  def walk_0 = fn {
+    (:segv) { DoomTex.segv_walk_0 }
+    (:leak) { DoomTex.leak_walk_0 }
+    (:race) { DoomTex.race_walk_0 }
+    (:dfree) { DoomTex.dfree_walk_0 }
+    (:free1) { DoomTex.free1_walk_0 }
+    (:boss) { DoomTex.boss_walk_0 }
+  }
+
+  def walk = fn (type, frame) {
+    (U32) (DoomMobTex.walk_0(type) + (U32) frame)
+  }
+
+  def atk = fn {
+    (:segv) { DoomTex.segv_atk }
+    (:leak) { DoomTex.leak_atk }
+    (:race) { DoomTex.race_atk }
+    (:dfree) { DoomTex.dfree_atk }
+    (:free1) { DoomTex.free1_atk }
+    (:boss) { DoomTex.boss_atk }
+  }
+
+  def dead = fn {
+    (:segv) { DoomTex.segv_dead }
+    (:leak) { DoomTex.leak_dead }
+    (:race) { DoomTex.race_dead }
+    (:dfree) { DoomTex.dfree_dead }
+    (:free1) { DoomTex.free1_dead }
+    (:boss) { DoomTex.boss_dead }
+  }
+
+end
+
+defmodule DoomMobType do
+
+  defstruct [hp: (F64) 0.0,
+             sp: (F64) 0.0,
+             sc: (F64) 0.0,
+             ranged: false,
+             melee: false,
+             rate: (F64) 0.0,
+             dmg: (F64) 0.0,
+             keep: (F64) 0.8,
+             flick: false,
+             split: false,
+             burst: (U8) 1,
+             no_pain: false,
+             msg: []]
+
+end
+
+defmodule DoomTypes do
+
+  def get = fn {
+    (:segv) {
+      %DoomMobType{hp: (F64) 30.0,
+                   sp: (F64) 1.3,
+                   sc: (F64) 0.8,
+                   ranged: true,
+                   rate: (F64) 1.8,
+                   dmg: (F64) 9.0,
+                   keep: (F64) 3.5,
+                   msg: ["SIGSEGV corrigé. NULL-check ajouté.",
+                         "Segfault fixé. Test RED puis GREEN."]}
+    }
+    (:leak) {
+      %DoomMobType{hp: (F64) 70.0,
+                   sp: (F64) 0.8,
+                   sc: (F64) 0.85,
+                   melee: true,
+                   rate: (F64) 1.0,
+                   dmg: (F64) 14.0,
+                   msg: ["Leak fixé. LSan au vert.",
+                         "Fuite colmatée. heaptrack content."]}
+    }
+    (:race) {
+      %DoomMobType{hp: (F64) 25.0,
+                   sp: (F64) 2.8,
+                   sc: (F64) 0.85,
+                   melee: true,
+                   rate: (F64) 0.6,
+                   dmg: (F64) 7.0,
+                   flick: true,
+                   msg: ["Race éliminée. Verrou récursif posé.",
+                         "Data race : rwlock ajouté."]}
+    }
+    (:dfree) {
+      %DoomMobType{hp: (F64) 45.0,
+                   sp: (F64) 1.1,
+                   sc: (F64) 0.8,
+                   ranged: true,
+                   rate: (F64) 2.2,
+                   dmg: (F64) 11.0,
+                   keep: (F64) 4.0,
+                   split: true,
+                   msg: ["Premier free()... attention au second."]}
+    }
+    (:free1) {
+      %DoomMobType{hp: (F64) 14.0,
+                   sp: (F64) 2.0,
+                   sc: (F64) 0.5,
+                   melee: true,
+                   rate: (F64) 0.8,
+                   dmg: (F64) 6.0,
+                   msg: ["ptr = NULL après free. Propre."]}
+    }
+    (:boss) {
+      %DoomMobType{hp: (F64) 900.0,
+                   sp: (F64) 0.9,
+                   sc: (F64) 1.8,
+                   ranged: true,
+                   rate: (F64) 0.9,
+                   dmg: (F64) 16.0,
+                   keep: (F64) 5.0,
+                   burst: (U8) 5,
+                   no_pain: true,
+                   msg: ["env->err : verrou posé. La prod tient !"]}
+    }
+  }
+
+end
+
+defmodule DoomWeapon do
+
+  defstruct [name: "",
+             cd: (F64) 0.0,
+             dmin: (F64) 0.0,
+             dmax: (F64) 0.0,
+             pellets: (U8) 1,
+             spread: (F64) 0.0,
+             ammo: (U8) 0,
+             sfx: :none]
+
+end
+
+defmodule DoomWeapons do
+
+  def all = [%DoomWeapon{name: "printf",
+                         cd: (F64) 0.32,
+                         dmin: (F64) 10.0,
+                         dmax: (F64) 20.0,
+                         pellets: (U8) 1,
+                         spread: (F64) 0.01,
+                         ammo: (U8) 1,
+                         sfx: :pistol},
+             %DoomWeapon{name: "gdb",
+                         cd: (F64) 0.85,
+                         dmin: (F64) 7.0,
+                         dmax: (F64) 13.0,
+                         pellets: (U8) 7,
+                         spread: (F64) 0.09,
+                         ammo: (U8) 2,
+                         sfx: :shotgun},
+             %DoomWeapon{name: "ASan",
+                         cd: (F64) 0.085,
+                         dmin: (F64) 7.0,
+                         dmax: (F64) 12.0,
+                         pellets: (U8) 1,
+                         spread: (F64) 0.035,
+                         ammo: (U8) 1,
+                         sfx: :chain}]
+
+end
+
+defmodule DoomTips do
+
+  def all = ["Fact : `unquote (x)` avec l'espace, sinon c'est un appel.",
+             "Fact : `! a && b` se lit `! (a && b)`.",
+             "Fact : en kc3, void rend 404.",
+             "Fact : List.filter garde le résultat, pas l'élément.",
+             "Fact : clean_dump AVANT l'édition. Jamais après.",
+             "Fact : pas d'ASan sur OpenBSD. MALLOC_OPTIONS=CDFGJU.",
+             "Fact : tout est cow. N'enquête pas sur le refcount.",
+             "Fact : env_fork partage err. Verrou récursif.",
+             "Fact : les resets ? Le tunnel SSH. Encore.",
+             "Fact : lire 0 octet n'est pas une erreur. Teste <= 0.",
+             "Fact : commits kmx.io = une ligne, sans corps.",
+             "Fact : un test RED avant chaque fix. Toujours."]
+
+end
+
+defmodule DoomItems do
+
+  def get = fn {
+    ("c") { {DoomTex.item_coffee, (F64) 0.35, (F64) 0.0} }
+    ("a") { {DoomTex.item_ammo, (F64) 0.35, (F64) 0.0} }
+    ("f") { {DoomTex.item_fact, (F64) 0.4, (F64) 0.25} }
+    ("g") { {DoomTex.item_gdb, (F64) 0.5, (F64) 0.0} }
+    ("z") { {DoomTex.item_asan, (F64) 0.5, (F64) 0.0} }
+    ("v") { {DoomTex.item_armor, (F64) 0.42, (F64) 0.0} }
+    (other) { void }
+  }
+
+end
+
+defmodule DoomMobChars do
+
+  def get = fn {
+    ("s") { :segv }
+    ("l") { :leak }
+    ("r") { :race }
+    ("d") { :dfree }
+    ("B") { :boss }
+    (other) { void }
+  }
+
+end
+
+defmodule DoomLevel do
+
+  defstruct [name: "",
+             sub: "",
+             floor: (U32) 0,
+             ceil: (U32) 0,
+             a: (F64) 0.0,
+             fog: (F64) 0.0,
+             thomas: [],
+             outro: "",
+             map: []]
+
+end
+
+defmodule DoomLevels do
+
+  def count = (U8) 3
+
+  def all = [%DoomLevel{name: "E1M1 : libkc3/",
+                        sub: "Le runtime",
+                        floor: DoomTex.floor_tile,
+                        ceil: DoomTex.floor_panel,
+                        a: (F64) 0.0,
+                        fog: (F64) 14.0,
+                        thomas: ["Salut ! Bienvenue chez kmx.io.",
+                                 "Ici on écrit KC3 : un langage, en C.",
+                                 "Règle d'or : un test RED, puis GREEN.",
+                                 "Le terminal derrière moi : git push."],
+                        outro: "« Bien. Maintenant, le serveur HTTP. »",
+                        map: [
+"111111111111111111111111",
+"1P...1.......2.....s...1",
+"1....1...c...2.........1",
+"1....D.......2222D222..1",
+"1....1...s.........2...1",
+"11D111....6666.....2.f.1",
+"1.........6..6..s..2...1",
+"1..a..l...6.g6.....D...1",
+"1......f..6..6.....2...1",
+"1...s.....66D6.....22221",
+"1......................1",
+"122D222222222....s...a.1",
+"1......2....1..........1",
+"1..s...2..f.1...l......1",
+"1......D....1111D1111111",
+"1..c...2....1..........1",
+"1......2..s.1....T.....1",
+"1f.....2....1..........1",
+"11111111111111111X111111"]},
+             %DoomLevel{name: "E1M2 : httpd",
+                        sub: "La boucle d'événements (OpenBSD)",
+                        floor: DoomTex.floor_grate,
+                        ceil: DoomTex.floor_dark,
+                        a: (F64) 0.0,
+                        fog: (F64) 12.0,
+                        thomas: ["Le httpd tourne sur OpenBSD.",
+                                 "Pas d'ASan là-bas : MALLOC_OPTIONS=CDFGJU.",
+                                 "Les races sont rapides. Vise bien.",
+                                 "kqueue en EV_ONESHOT : pense à ré-armer."],
+                        outro: "« Parfait. Direction la prod. »",
+                        map: [
+"33333333333333333333333333",
+"3P....3.........4........3",
+"3.....3...r.....4...r....3",
+"3..c..D.........D........3",
+"3.....3...a.....4....f...3",
+"333D333.........444D44.443",
+"3.......r.....d......4...3",
+"3..f..........3333...4.v.3",
+"3.........r...3..3...D...3",
+"3.....333D3333.z.3...4.d.3",
+"3.....3.......3..3...4...3",
+"3.d...3..l..r.3..3...4...3",
+"3.....3......f33D3...4...3",
+"3.....3..............4...3",
+"3333D33333333D3333...4...3",
+"3.........3.......d..D.r.3",
+"3..r..a...3..........4...3",
+"3.........D....T.....4.c.3",
+"3..f......3..........4...3",
+"33333333333333333X33333333"]},
+             %DoomLevel{name: "E1M3 : PROD",
+                        sub: "25 req/s et des core dumps",
+                        floor: DoomTex.floor_carpet,
+                        ceil: DoomTex.floor_dark,
+                        a: (F64) 0.0,
+                        fog: (F64) 11.0,
+                        thomas: ["La prod crashe sous charge...",
+                                 "Le coupable : env->err partagé entre threads.",
+                                 "Trouve-le. Corrige-le. Puis commit.",
+                                 "Une ligne, sans corps."],
+                        outro: "« Commit validé. »",
+                        map: [
+"4444444444444444444444444444",
+"4P...4.......5.............4",
+"4....4..s....5....l....s...4",
+"4.c..D.......5.............4",
+"4....4..a....55555D55555...4",
+"44D444...............f.....4",
+"4........l....r.......4444D4",
+"4..f.......444444.....4....4",
+"4...s......4....4..s..4.v..4",
+"4..........4.z..D.....4....4",
+"4..a.......4....4.....4..c.4",
+"4444D4444444444445555555D554",
+"4..........................4",
+"4...5....5..r..5....5......4",
+"4..........................4",
+"4..s............B.......r..4",
+"4..........................4",
+"4...5....5.....5....5......4",
+"4..c.......................4",
+"4.......a.........f....a...4",
+"4..........................4",
+"4...........T..............4",
+"4444444444444X44444444444444"]}]
+
+end
