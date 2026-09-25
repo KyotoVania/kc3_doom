@@ -19,7 +19,7 @@ kc3_var () {
 CC="${CC:-$(kc3_var CC)}"
 CAIRO_LIBS="$(pkg-config --libs cairo)"
 
-LDFLAGS=""
+LDFLAGS="-Wl,--export-dynamic"
 for d in libkc3 window window/cairo window/cairo/xcb; do
     LDFLAGS="$LDFLAGS -L$KC3/$d -Wl,-rpath,$KC3/$d"
 done
@@ -31,7 +31,7 @@ done
     echo "CPPFLAGS = $(kc3_var CPPFLAGS) -DPROG=\"\\\"kmx_doom\\\"\" -I$KC3"
     echo "CFLAGS = $(kc3_var CFLAGS)"
     echo "LDFLAGS =$LDFLAGS"
-    echo "LIBS = -lkc3_window_cairo_xcb -lkc3_window_cairo -lkc3_window -lkc3 $CAIRO_LIBS"
+    echo "LIBS = -lkc3_window_cairo_xcb -lkc3_window_cairo -lkc3_window -lkc3 $CAIRO_LIBS -lm"
 } > "$CONFIG_MK"
 
 echo "configure: KC3 = $KC3"

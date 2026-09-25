@@ -1,7 +1,9 @@
 #ifndef KMX_DOOM_ENGINE_H
 #define KMX_DOOM_ENGINE_H
 
-#include <stdbool.h>
+#ifndef LIBKC3_TYPES_H
+# include <stdbool.h>
+#endif
 #include <stdint.h>
 #include <cairo.h>
 

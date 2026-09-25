@@ -13,7 +13,9 @@
 #ifndef KMX_DOOM_HUD_H
 #define KMX_DOOM_HUD_H
 
-#include <stdbool.h>
+#ifndef LIBKC3_TYPES_H
+# include <stdbool.h>
+#endif
 #include <cairo.h>
 #include "engine.h"
 
