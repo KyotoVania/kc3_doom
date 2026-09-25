@@ -27,13 +27,16 @@ Depuis la racine de `kmx_doom/`, une worktree par fiche pour éviter les conflit
 mkdir -p logs
 git worktree add ../kmx_doom-01 -b task/01
 cd ../kmx_doom-01
-kimi -y --add-dir ../kc3 -p "$(cat tasks/01-engine-render.md)" \
-     --output-format stream-json > ../kmx_doom/logs/01.jsonl
+~/.kimi-code/bin/kimi --add-dir ../kc3 -p "$(cat tasks/01-engine-render.md)" \
+     --output-format stream-json > ../kmx_doom/logs/01.jsonl \
+     2> ../kmx_doom/logs/01.err &
 ```
 
-- `-y` exécute les éditions courantes et demande confirmation pour les actions risquées. Éviter `--auto` tant que le comportement n'est pas connu.
+- `-p` est incompatible avec `-y` et `--auto`. Kimi 2.0.2 répond `error: Cannot combine --prompt with --yolo` (ou `--auto`) et s'arrête avec le code 0 sans rien faire. Toujours vérifier `logs/NN.err`.
+- Avec `-p` seul, Kimi écrit des fichiers et lance des commandes shell sans demander confirmation, comme en mode `--auto`. Le respect de « ne pas modifier `../kc3` » repose uniquement sur les consignes de la fiche.
 - `--add-dir ../kc3` donne accès aux sources kc3. Depuis une worktree `../kmx_doom-NN`, `../kc3` pointe toujours vers `kc3git/kc3`.
-- En vague 1, on peut lancer les 4 fiches dans 4 terminaux.
+- Avec `&`, le process continue après la fermeture du shell. Pour suivre l'avancement, regarder la taille de `logs/NN.jsonl` et `ps -C kimi-code`. Le log grossit par blocs, un message entier à la fois : une taille stable pendant quelques minutes veut dire qu'un gros fichier est en cours d'écriture, pas que l'agent est bloqué.
+- En vague 1, on peut lancer les 4 fiches en même temps.
 
 Revue puis merge :
 
