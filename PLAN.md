@@ -1,6 +1,6 @@
 # KMX DOOM, port kc3 + window/cairo (xcb)
 
-Source : `../kmx_doom.html` (550 lignes JS). Les numéros de ligne ci-dessous renvoient à ce fichier.
+Source : `kmx_doom.html` (550 lignes JS). Les numéros de ligne ci-dessous renvoient à ce fichier.
 
 ## Mesures qui fixent la frontière C / kc3
 
@@ -17,10 +17,10 @@ Il faut aussi limiter le nombre de passages entre C et kc3 par frame : pas d'app
 
 ## Phase 0 : valider le squelette (fait côté kc3, compilation par toi)
 
-Dépôt autonome : `kmx_doom/`, à côté de `kc3/`.
+Dépôt autonome dans `kc3/kc3_doom/` (ignoré par kc3 via `.git/info/exclude`).
 
 ```
-kmx_doom/
+kc3/kc3_doom/
   kmx_doom.html   référence JS
   src/kmx_doom.c  hôte C : window_cairo_xcb_run, callbacks, appels kc3 via eval_callable_call
   kc3/doom.kc3    Doom.init/update/key/button/view sur le struct DoomState
@@ -43,14 +43,15 @@ L'état est une valeur kc3 immuable, que le C garde dans un `s_tag` et remplace 
 La séquence kc3 est déjà validée avec `kc3s` (init, key ×4, update, view, button) et la sortie est conforme au contrat.
 
 Build (dépendance à un arbre kc3 déjà configuré et compilé, rien n'est installé) :
-1. `./configure` (ou `KC3=/chemin/kc3 ./configure`, par défaut `../kc3`).
+1. `./configure` (ou `KC3=/chemin/kc3 ./configure`, par défaut `..`).
    - Il lit `$KC3/window/cairo/xcb/demo/config.mk`, généré par le `configure` de kc3.
    - Il reprend `CPPFLAGS` et `CFLAGS` (donc `-DHAVE_F80=1 -DF80_SIZE=16` et les chemins propres à la plateforme), y ajoute `-I$KC3` et `-DPROG`.
    - Il ajoute `-L` et `-Wl,-rpath` vers `libkc3`, `window`, `window/cairo` et `window/cairo/xcb`, plus `pkg-config --libs cairo`.
    - Vérifié : les flags sont identiques à ceux de la démo xcb.
 2. `make`. Si le build kc3 change de flags (reconfigure, passage à OpenBSD), relancer `./configure`.
-3. `make run` lance `KC3_DIR=$KC3 KMX_DOOM_KC3=kc3/doom.kc3 ./kmx_doom`.
-   - `KC3_DIR` permet à `env_init` de trouver `lib/kc3/0.1` hors de l'arbre kc3 (`libkc3/env.c:2193`).
+3. `make run` lance `./kmx_doom` depuis la racine du dépôt.
+   - `env_init` trouve `lib/kc3/0.1` par l'entrée `../` de sa liste de recherche, parce que le dépôt est dans `kc3/`.
+   - `KC3_DIR` ne marche pas avec un chemin absolu : `file_search` (`libkc3/file.c:1141-1160`) préfixe chaque entrée par `argv0_dir`, ce qui donne `.//home/...`. C'est la raison du déplacement dans `kc3/`.
 4. Variante ASan, plus tard : faire la même extraction avec les variables `_ASAN` et `-lkc3_asan`… Les `.so` kc3 doivent correspondre au mode (`make lib_links_linux_asan`).
 
 Ce qu'on doit voir : une grille, un point orange avec sa direction, les flèches qui bougent le point, et la barre du bas avec la touche ou le clic et le compteur de frames.
@@ -58,7 +59,7 @@ Ce qu'on doit voir : une grille, un point orange avec sa direction, les flèches
 Points à surveiller au premier lancement (pas encore vérifiés côté C) :
 - `env_ident_get` sur `Doom.update` doit renvoyer un `TAG_PCALLABLE`. Sinon, le message d'erreur est explicite.
 - Le chemin passé à `kc3_load` est relatif au répertoire courant : `kc3/doom.kc3` par défaut, donc il faut lancer depuis la racine du dépôt.
-- Au moment de `kc3_init`, `KC3_DIR` doit être positionné si le binaire n'est pas dans l'arbre kc3.
+- Lancer le binaire depuis `kc3/kc3_doom/` : les `.kc3` du jeu sont chargés en chemins relatifs, et `lib/kc3/0.1` est trouvé par `../`.
 - `render` est appelé environ 120 fois par seconde par un faux `XCB_EXPOSE` (`window_cairo_xcb.c`, boucle `run`). `dt` est plafonné à 50 ms.
 - Le backend xcb inverse y pour `button` (`window->h - y`) mais pas pour `motion`.
 

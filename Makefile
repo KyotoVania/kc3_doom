@@ -25,7 +25,7 @@ src/hud.o: src/hud.c src/hud.h src/engine.h config.mk
 	${CC} ${CPPFLAGS} ${CFLAGS} -Isrc -c src/hud.c -o src/hud.o
 
 run: ${PROG}
-	KC3_DIR=${KC3} ./${PROG}
+	./${PROG}
 
 clean:
 	rm -f ${PROG} ${OBJECTS}

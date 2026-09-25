@@ -21,36 +21,36 @@ Intégration finale (brancher `src/kmx_doom.c` sur le moteur, le HUD et le jeu) 
 
 ## Lancer une fiche
 
-Depuis la racine de `kmx_doom/`, une worktree par fiche pour éviter les conflits :
+Depuis la racine de `kc3/kc3_doom/`, une worktree par fiche pour éviter les conflits :
 
 ```sh
 mkdir -p logs
-git worktree add ../kmx_doom-01 -b task/01
-cd ../kmx_doom-01
-~/.kimi-code/bin/kimi --add-dir ../kc3 -p "$(cat tasks/01-engine-render.md)" \
-     --output-format stream-json > ../kmx_doom/logs/01.jsonl \
-     2> ../kmx_doom/logs/01.err &
+git worktree add ../kc3_doom-01 -b task/01
+cd ../kc3_doom-01
+~/.kimi-code/bin/kimi --add-dir .. -p "$(cat tasks/01-engine-render.md)" \
+     --output-format stream-json > ../kc3_doom/logs/01.jsonl \
+     2> ../kc3_doom/logs/01.err &
 ```
 
 - `-p` est incompatible avec `-y` et `--auto`. Kimi 2.0.2 répond `error: Cannot combine --prompt with --yolo` (ou `--auto`) et s'arrête avec le code 0 sans rien faire. Toujours vérifier `logs/NN.err`.
 - Avec `-p` seul, Kimi écrit des fichiers et lance des commandes shell sans demander confirmation, comme en mode `--auto`. Le respect de « ne pas modifier `../kc3` » repose uniquement sur les consignes de la fiche.
-- `--add-dir ../kc3` donne accès aux sources kc3. Depuis une worktree `../kmx_doom-NN`, `../kc3` pointe toujours vers `kc3git/kc3`.
+- `--add-dir ../kc3` donne accès aux sources kc3. Depuis une worktree `../kc3_doom-NN`, `../kc3` pointe toujours vers `kc3git/kc3`.
 - Avec `&`, le process continue après la fermeture du shell. Pour suivre l'avancement, regarder la taille de `logs/NN.jsonl` et `ps -C kimi-code`. Le log grossit par blocs, un message entier à la fois : une taille stable pendant quelques minutes veut dire qu'un gros fichier est en cours d'écriture, pas que l'agent est bloqué.
 - En vague 1, on peut lancer les 4 fiches en même temps.
 
 Revue puis merge :
 
 ```sh
-cd ../kmx_doom
+cd ../kc3_doom
 git diff master...task/01
 git merge task/01
-git worktree remove ../kmx_doom-01
+git worktree remove ../kc3_doom-01
 git branch -d task/01
 ```
 
 ## Règles communes à toutes les fiches (rappelées dans chacune)
 
-- Ne jamais compiler ni modifier kc3 (`../kc3`), qui est en lecture seule. Ne pas lancer `make` dans `kmx_doom`.
+- Ne jamais compiler ni modifier kc3 (`..`), qui est en lecture seule. Ne pas lancer `make` dans `kc3_doom`.
 - Autorisé : compiler et exécuter les tests **autonomes** de `tests/` (C pur + cairo, sans libkc3) avec la commande exacte donnée par la fiche. Exécuter `kc3s` sur des scripts de `tests/` avec la commande donnée.
 - Ne pas commiter : le propriétaire relit et commite lui-même.
 - Aucun commentaire dans le code, sauf l'en-tête de licence quand un fichier voisin en a un.
@@ -95,7 +95,7 @@ Hors grille, la cellule est solide. Une porte ouverte redevient `.`.
 Lancer un script kc3 depuis la racine de la worktree :
 
 ```sh
-(cd ../kc3 && . ./env && cd - >/dev/null && ../kc3/kc3s/kc3s --load tests/NOM.kc3 --quit)
+(cd .. && . ./env && cd - >/dev/null && ../kc3s/kc3s --load tests/NOM.kc3 --quit)
 ```
 
 - `. ./env` doit être sourcé depuis la racine de kc3, car il utilise `$PWD`. Ne pas composer `LD_LIBRARY_PATH` à la main.
