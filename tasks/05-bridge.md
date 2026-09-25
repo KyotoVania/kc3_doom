@@ -61,6 +61,11 @@ Lis `tasks/README.md` en entier, en particulier « Contrats communs » et « Vue
 
 Lecture numérique tolérante : kc3 redescend l'arithmétique entière au plus petit type (piège 3 du README), et certaines valeurs peuvent arriver en F64. Pour tout champ numérique du tableau, et pour `floor_tex`, `ceil_tex` et `tex`, accepter `TAG_U8`, `TAG_U16`, `TAG_U32`, `TAG_U64`, `TAG_S8`, `TAG_S16`, `TAG_S32`, `TAG_S64`, `TAG_F32` et `TAG_F64`, puis convertir. Écrire un seul helper `kmx_doom_tag_f64` et un seul `kmx_doom_tag_int`.
 
+Validation des ids de texture, **obligatoire** : `engine_render` (fiche 01, `src/engine.c`) indexe `engine->tex[id]` sans vérifier les bornes, pour rester rapide. C'est donc au pont de rejeter les ids invalides.
+- `floor_tex` et `ceil_tex` hors de `[0, TEX_COUNT)` : message `err_puts` explicite, et `kmx_doom_view_read` renvoie false. Ne pas appeler `engine_render` pour cette frame.
+- `tex` d'un sprite hors de `[0, TEX_COUNT)`, ou valeur négative ou non entière reçue en F64 : ignorer ce sprite et le signaler par `err_puts`, au plus une fois par frame pour ne pas inonder stderr. Continuer la lecture.
+- Même règle pour les coordonnées : `x`, `y`, `px`, `py`, `pa`, `fog`, `scale` et `lift` doivent être finis (`isfinite`), et `fog` doit être > 0, sinon le sprite est ignoré, ou la frame rejetée s'il s'agit d'un champ du tuple.
+
 `state_sym` (1er élément du tuple) donne `hud.state` : `:title`→`HUD_TITLE`, `:play`, `:pause`, `:dead`, `:inter`, `:win`. `px`, `py` et `pa` du tuple sont copiés dans `g_hud`.
 
 ### 2. `kc3/doom_engine.kc3`
