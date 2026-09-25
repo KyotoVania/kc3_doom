@@ -1,0 +1,153 @@
+load("kc3/data.kc3")
+load("tests/engine_stub.kc3")
+load("kc3/game.kc3")
+
+defmodule ViewCheck do
+
+  def num? = fn (x) {
+    t = type(x)
+    (t == F64) || (t == F32) || (t == U8) || (t == U16) || (t == U32) ||
+      (t == U64) || (t == S8) || (t == S16) || (t == S32) || (t == S64) ||
+      (t == Uw) || (t == Sw)
+  }
+
+  def tex? = fn (x) {
+    ViewCheck.num?(x) && (x >= 0) && (x < DoomTex.count)
+  }
+
+  def fail = fn (label) {
+    puts("FAIL #{label}")
+    (U64) 1
+  }
+
+  def ok = fn (cond, label) {
+    if cond do (U64) 0 else ViewCheck.fail(label) end
+  }
+
+  def sprites = fn (l) {
+    n = (U64) 0
+    rest = ^ l
+    while (rest != []) do
+      [sp | tail] = ^ rest
+      {x, y, tex, sc, lift, flash} = ^ sp
+      n = (U64) (n + ViewCheck.ok(ViewCheck.num?(x) && ViewCheck.num?(y) &&
+                                  ViewCheck.tex?(tex) &&
+                                  ViewCheck.num?(sc) &&
+                                  ViewCheck.num?(lift) &&
+                                  (type(flash) == Bool),
+                                  "sprite #{inspect(sp)}"))
+      rest = ^ tail
+    end
+    n
+  }
+
+  def pairs = fn (l, label) {
+    n = (U64) 0
+    rest = ^ l
+    while (rest != []) do
+      [p | tail] = ^ rest
+      {a, b} = ^ p
+      n = (U64) (n + ViewCheck.ok(ViewCheck.num?(a) && ViewCheck.num?(b),
+                                  "#{label} #{inspect(p)}"))
+      rest = ^ tail
+    end
+    n
+  }
+
+  def msgs = fn (l) {
+    n = (U64) 0
+    rest = ^ l
+    while (rest != []) do
+      [m | tail] = ^ rest
+      {text, t} = ^ m
+      n = (U64) (n + ViewCheck.ok((type(text) == Str) && ViewCheck.num?(t),
+                                  "msg #{inspect(m)}"))
+      rest = ^ tail
+    end
+    n
+  }
+
+  def hud = fn (h) {
+    n = (U64) 0
+    nums = [h.state_t, h.time, h.fire_t, h.hurt_t, h.pick_t, h.grin_t,
+            h.bob, h.moving, h.level_time, h.intro, h.g_time, h.hp,
+            h.armor, h.ammo, h.weapon, h.kills, h.total, h.facts,
+            h.ftotal, h.g_kills, h.g_total, h.g_facts, h.g_ftotal]
+    n = (U64) (n + ViewCheck.ok(List.all?(nums, fn (x) {
+                                  ViewCheck.num?(x) }),
+                                "hud numeric fields"))
+    n = (U64) (n + ViewCheck.ok((List.length(h.owned) == (U64) 3) &&
+                                List.all?(h.owned, fn (b) {
+                                  type(b) == Bool }),
+                                "hud owned"))
+    n = (U64) (n + ViewCheck.ok((type(h.weapon_name) == Str) &&
+                                (type(h.level_name) == Str) &&
+                                (type(h.level_sub) == Str) &&
+                                (type(h.outro) == Str),
+                                "hud strings"))
+    n = (U64) (n + ViewCheck.ok((h.thomas_line == void) ||
+                                (type(h.thomas_line) == Str),
+                                "hud thomas_line"))
+    n = (U64) (n + ViewCheck.ok(type(h.show_map) == Bool, "hud show_map"))
+    if (h.thomas != void) do
+      n = (U64) (n + ViewCheck.pairs([h.thomas], "hud thomas"))
+    end
+    n = (U64) (n + ViewCheck.msgs(h.msgs))
+    n = (U64) (n + ViewCheck.pairs(h.mobs, "hud mob"))
+    n
+  }
+
+  def view = fn (s, label) {
+    {st, px, py, pa, fl, ce, fog, sprites, hud, sfx} = Doom.view(s)
+    n = (U64) 0
+    n = (U64) (n + ViewCheck.ok(List.has?([:title, :play, :pause, :dead,
+                                           :inter, :win], st),
+                                "#{label} state"))
+    n = (U64) (n + ViewCheck.ok(ViewCheck.num?(px) && ViewCheck.num?(py) &&
+                                ViewCheck.num?(pa) && ViewCheck.num?(fog) &&
+                                (fog > (F64) 0.0),
+                                "#{label} px py pa fog"))
+    n = (U64) (n + ViewCheck.ok(ViewCheck.tex?(fl) && ViewCheck.tex?(ce),
+                                "#{label} floor ceil"))
+    n = (U64) (n + ViewCheck.sprites(sprites))
+    n = (U64) (n + ViewCheck.hud(hud))
+    n = (U64) (n + ViewCheck.ok(List.all?(sfx, fn (x) { type(x) == Sym }),
+                                "#{label} sfx"))
+    n
+  }
+
+  def updates = fn (s, n) {
+    i = (Uw) 0
+    while (i < n) do
+      s = Doom.update(s, (F64) 0.016)
+      i = (Uw) (i + 1)
+    end
+    s
+  }
+
+end
+
+fails = (U64) 0
+s = Doom.init((U32) 400, (U32) 250)
+fails = (U64) (fails + ViewCheck.view(s, "title"))
+s = ViewCheck.updates(s, (Uw) 40)
+s = Doom.button(s, (U8) 1, (S64) 0, (S64) 0)
+s = ViewCheck.updates(s, (Uw) 120)
+fails = (U64) (fails + ViewCheck.view(s, "play"))
+s = Doom.button(s, (U8) 1, (S64) 0, (S64) 0)
+s = Doom.key(s, (U32) 109)
+p = s.player
+s = %DoomState{s | player: %DoomPlayer{p | x: s.tx - (F64) 1.0, y: s.ty}}
+s = Doom.update(s, (F64) 0.016)
+fails = (U64) (fails + ViewCheck.view(s, "play+map+thomas"))
+s = DoomGame.set_state(s, :inter)
+fails = (U64) (fails + ViewCheck.view(s, "inter"))
+s = DoomGame.set_state(s, :win)
+fails = (U64) (fails + ViewCheck.view(s, "win"))
+s = DoomGame.set_state(s, :dead)
+fails = (U64) (fails + ViewCheck.view(s, "dead"))
+if (fails == (U64) 0) do
+  puts("view_check: OK")
+else
+  puts("view_check: #{fails} FAIL")
+end
