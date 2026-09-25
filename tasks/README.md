@@ -33,8 +33,8 @@ cd ../kc3_doom-01
 ```
 
 - `-p` est incompatible avec `-y` et `--auto`. Kimi 2.0.2 répond `error: Cannot combine --prompt with --yolo` (ou `--auto`) et s'arrête avec le code 0 sans rien faire. Toujours vérifier `logs/NN.err`.
-- Avec `-p` seul, Kimi écrit des fichiers et lance des commandes shell sans demander confirmation, comme en mode `--auto`. Le respect de « ne pas modifier `../kc3` » repose uniquement sur les consignes de la fiche.
-- `--add-dir ../kc3` donne accès aux sources kc3. Depuis une worktree `../kc3_doom-NN`, `../kc3` pointe toujours vers `kc3git/kc3`.
+- Avec `-p` seul, Kimi écrit des fichiers et lance des commandes shell sans demander confirmation, comme en mode `--auto`. Le respect de « ne pas modifier `..` » repose uniquement sur les consignes de la fiche.
+- `--add-dir ..` donne accès aux sources kc3 : le dépôt vit dans `kc3/kc3_doom/` et ses worktrees dans `kc3/kc3_doom-NN/`, donc `..` est toujours la racine de kc3. Dans les fiches 01 à 06, écrites avant le déplacement, lire `..` à la place de `../kc3`.
 - Avec `&`, le process continue après la fermeture du shell. Pour suivre l'avancement, regarder la taille de `logs/NN.jsonl` et `ps -C kimi-code`. Le log grossit par blocs, un message entier à la fois : une taille stable pendant quelques minutes veut dire qu'un gros fichier est en cours d'écriture, pas que l'agent est bloqué.
 - En vague 1, on peut lancer les 4 fiches en même temps.
 
