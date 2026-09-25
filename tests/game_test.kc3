@@ -1,0 +1,192 @@
+require Time
+
+load("kc3/data.kc3")
+load("tests/engine_stub.kc3")
+load("kc3/game.kc3")
+
+defmodule GameCheck do
+
+  def t = fn (ok, label) {
+    if ok do
+      (U64) 0
+    else
+      puts("FAIL #{label}")
+      (U64) 1
+    end
+  }
+
+  def ms = fn (t) {
+    (F64) t.tv_sec * (F64) 1000.0 + (F64) t.tv_nsec / (F64) 1000000.0
+  }
+
+  def hud_keys = [:state_t, :time, :fire_t, :hurt_t, :pick_t, :grin_t,
+                  :bob, :moving, :level_time, :intro, :g_time, :hp,
+                  :armor, :ammo, :weapon, :kills, :total, :facts,
+                  :ftotal, :g_kills, :g_total, :g_facts, :g_ftotal,
+                  :owned, :weapon_name, :level_name, :level_sub, :outro,
+                  :msgs, :thomas_line, :thomas, :show_map, :mobs]
+
+  def missing_keys = fn (hud) {
+    keys = Map.keys(hud)
+    n = (U64) 0
+    rest = ^ GameCheck.hud_keys
+    while (rest != []) do
+      [k | tail] = ^ rest
+      if (! List.has?(keys, k)) do
+        puts("missing hud key #{k}")
+        n = (U64) (n + 1)
+      end
+      rest = ^ tail
+    end
+    n
+  }
+
+  def updates = fn (s, n) {
+    i = (Uw) 0
+    while (i < n) do
+      s = Doom.update(s, (F64) 0.016)
+      i = (Uw) (i + 1)
+    end
+    s
+  }
+
+  def find_item = fn (items, k) {
+    found = void
+    rest = ^ items
+    while (rest != []) do
+      [it | tail] = ^ rest
+      if (it.k == k) do
+        found = ^ it
+      end
+      rest = ^ tail
+    end
+    found
+  }
+
+  def first_alive = fn (mobs) {
+    idx = (Uw) 0
+    found = (Uw) 9999
+    rest = ^ mobs
+    while (rest != []) do
+      [e | tail] = ^ rest
+      if ((! e.dead) && (found == (Uw) 9999)) do
+        found = ^ idx
+      end
+      idx = (Uw) (idx + 1)
+      rest = ^ tail
+    end
+    found
+  }
+
+  def crowd = fn (n) {
+    out = []
+    i = (Uw) 0
+    while (i < n) do
+      t = if ((i mod (Uw) 3) == (Uw) 0) do
+            :segv
+          else
+            if ((i mod (Uw) 3) == (Uw) 1) do :leak else :race end
+          end
+      m = DoomGame.new_mob(t, (F64) 2.5 + (F64) (i mod (Uw) 15),
+                           (F64) 3.5 + (F64) (i / (Uw) 15) * (F64) 8.0)
+      out = [%DoomMob{m | alert: true} | out]
+      i = (Uw) (i + 1)
+    end
+    out
+  }
+
+end
+
+fails = (U64) 0
+
+s = Doom.init((U32) 400, (U32) 250)
+{st, px, py, pa, fl, ce, fog, sprites, hud, sfx} = Doom.view(s)
+fails = (U64) (fails + GameCheck.t(st == :title, "1 state title"))
+fails = (U64) (fails + GameCheck.t(GameCheck.missing_keys(hud) == (U64) 0,
+                                   "1 hud keys"))
+fails = (U64) (fails + GameCheck.t(fl == DoomTex.floor_tile, "1 floor tex"))
+fails = (U64) (fails + GameCheck.t(List.length(sprites) > (U64) 0,
+                                   "1 sprites"))
+
+s = GameCheck.updates(s, (Uw) 40)
+s = Doom.button(s, (U8) 1, (S64) 0, (S64) 0)
+fails = (U64) (fails + GameCheck.t(s.state == :play, "2 state play"))
+fails = (U64) (fails + GameCheck.t(s.level.total == (F64) 9.0,
+                                   "2 total mobs E1M1"))
+
+x0 = s.player.x
+y0 = s.player.y
+i = (Uw) 0
+while (i < (Uw) 10) do
+  s = Doom.key(s, (U32) 65362)
+  i = (Uw) (i + 1)
+end
+fails = (U64) (fails + GameCheck.t((s.player.x != x0) || (s.player.y != y0),
+                                   "3 player moved"))
+
+s = Doom.key(s, (U32) 50)
+fails = (U64) (fails + GameCheck.t(s.player.weapon == (Uw) 0,
+                                   "4 no gdb yet"))
+g = GameCheck.find_item(s.items, "g")
+p = s.player
+s = %DoomState{s | player: %DoomPlayer{p | x: g.x, y: g.y}}
+s = Doom.update(s, (F64) 0.016)
+fails = (U64) (fails + GameCheck.t(DoomList.nth(s.player.owned, (Uw) 1),
+                                   "4 gdb owned"))
+fails = (U64) (fails + GameCheck.t(s.player.weapon == (Uw) 1,
+                                   "4 weapon 1"))
+
+s = Doom.key(s, (U32) 49)
+idx = GameCheck.first_alive(s.mobs)
+e = DoomList.nth(s.mobs, idx)
+s = %DoomState{s | mobs: DoomList.set_nth(s.mobs, idx,
+                                          %DoomMob{e | hp: (F64) 1.0})}
+p = s.player
+s = %DoomState{s | player: %DoomPlayer{p | x: e.x - (F64) 2.0, y: e.y,
+                                           a: (F64) 0.0, cd: (F64) 0.0,
+                                           ammo: (F64) 50.0}}
+kills0 = s.level.kills
+nmsg0 = List.length(s.msgs)
+s = Doom.button(s, (U8) 1, (S64) 0, (S64) 0)
+fails = (U64) (fails + GameCheck.t(s.level.kills == kills0 + (F64) 1.0,
+                                   "5 kill"))
+fails = (U64) (fails + GameCheck.t(List.length(s.msgs) > nmsg0 ||
+                                   List.length(s.msgs) == (U64) 4,
+                                   "5 kill message"))
+
+p = s.player
+s = %DoomState{s | player: %DoomPlayer{p | hp: (F64) 1.0, armor: (F64) 0.0}}
+s = DoomGame.hurt_player(s, (F64) 10.0)
+fails = (U64) (fails + GameCheck.t(s.state == :dead, "6 dead"))
+s = GameCheck.updates(s, (Uw) 40)
+s = Doom.button(s, (U8) 1, (S64) 0, (S64) 0)
+fails = (U64) (fails + GameCheck.t(s.state == :play, "6 restart"))
+fails = (U64) (fails + GameCheck.t(s.player.hp >= (F64) 50.0,
+                                   "6 restart hp"))
+fails = (U64) (fails + GameCheck.t(s.level.kills == (F64) 0.0,
+                                   "6 level reloaded"))
+
+p = s.player
+s = %DoomState{s | mobs: GameCheck.crowd((Uw) 30),
+                   player: %DoomPlayer{p | x: (F64) 12.5, y: (F64) 10.5,
+                                           hp: (F64) 1000000000.0}}
+t0 = Time.now()
+s = GameCheck.updates(s, (Uw) 60)
+total_ms = GameCheck.ms(Time.now() - t0)
+puts("ms/frame (60 updates, 30 mobs en alerte) : #{total_ms / (F64) 60.0}")
+fails = (U64) (fails + GameCheck.t(s.state == :play, "7 still playing"))
+
+t0 = Time.now()
+i = (Uw) 0
+while (i < (Uw) 60) do
+  v = Doom.view(s)
+  i = (Uw) (i + 1)
+end
+view_ms = GameCheck.ms(Time.now() - t0)
+puts("ms/view (60 vues, 30 mobs) : #{view_ms / (F64) 60.0}")
+
+if (fails == (U64) 0) do
+  puts("game_test: OK")
+else
+  puts("game_test: #{fails} FAIL")
+end

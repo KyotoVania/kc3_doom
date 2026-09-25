@@ -1,0 +1,28 @@
+defmodule DoomEngine do
+
+  def los = fn (ax, ay, bx, by) {
+    true
+  }
+
+  def cast = fn (x, y, dx, dy) {
+    (F64) 96.0
+  }
+
+  def blocked = fn (x, y, r) {
+    (x - r < (F64) 1.0) || (y - r < (F64) 1.0) ||
+      (x + r > (F64) 23.0) || (y + r > (F64) 17.0)
+  }
+
+  def grid_load = fn (rows) {
+    true
+  }
+
+  def grid_set = fn (x, y, c) {
+    true
+  }
+
+  def grid_get = fn (x, y) {
+    (U8) 46
+  }
+
+end

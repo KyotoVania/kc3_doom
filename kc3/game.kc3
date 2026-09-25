@@ -1,0 +1,1064 @@
+defmodule DoomMath do
+
+  def sqrt = cfn F64 "sqrt" (F64)
+
+  def atan2 = cfn F64 "atan2" (F64, F64)
+
+  def hypot = cfn F64 "hypot" (F64, F64)
+
+  def fabs = cfn F64 "fabs" (F64)
+
+  def floor = cfn F64 "floor" (F64)
+
+  def pi = (F64) 3.141592653589793
+
+  def min = fn (a, b) {
+    if (a < b) do a else b end
+  }
+
+  def max = fn (a, b) {
+    if (a > b) do a else b end
+  }
+
+end
+
+defmodule DoomRand do
+
+  def rand = cfn F64 "drand48" ()
+
+  def seed = cfn Void "srand48" (S64)
+
+end
+
+defmodule DoomList do
+
+  def nth = fn (l, i) {
+    rest = ^ l
+    while (i > (Uw) 0) do
+      rest = List.next(rest)
+      i = (Uw) (i - 1)
+    end
+    List.first(rest)
+  }
+
+  def set_nth = fn (l, i, v) {
+    [h | t] = ^ l
+    if (i == (Uw) 0) do
+      [v | t]
+    else
+      [h | DoomList.set_nth(t, (Uw) (i - 1), v)]
+    end
+  }
+
+  def len = fn (l) {
+    (Uw) List.length(l)
+  }
+
+end
+
+defmodule DoomConfig do
+
+  def step = (F64) 0.11
+
+  def turn = (F64) 0.08
+
+  def radius = (F64) 0.25
+
+end
+
+defmodule DoomPlayer do
+
+  defstruct [x: (F64) 0.0,
+             y: (F64) 0.0,
+             a: (F64) 0.0,
+             hp: (F64) 100.0,
+             armor: (F64) 0.0,
+             ammo: (F64) 50.0,
+             weapon: (Uw) 0,
+             owned: [true, false, false],
+             cd: (F64) 0.0,
+             fire_t: (F64) 0.0,
+             hurt_t: (F64) 0.0,
+             grin_t: (F64) 0.0,
+             pick_t: (F64) 0.0,
+             bob: (F64) 0.0,
+             moving: (F64) 0.0]
+
+end
+
+defmodule DoomMob do
+
+  defstruct [t: :segv,
+             x: (F64) 0.0,
+             y: (F64) 0.0,
+             hp: (F64) 0.0,
+             alert: false,
+             cd: (F64) 1.0,
+             atk: (F64) 0.0,
+             pain: (F64) 0.0,
+             anim: (F64) 0.0,
+             dead: false,
+             sp: (F64) 1.0,
+             sc: (F64) 0.8,
+             ranged: false,
+             melee: false,
+             rate: (F64) 1.0,
+             dmg: (F64) 0.0,
+             keep: (F64) 0.8,
+             flick: false]
+
+end
+
+defmodule DoomItem do
+
+  defstruct [k: "",
+             x: (F64) 0.0,
+             y: (F64) 0.0,
+             taken: false]
+
+end
+
+defmodule DoomProj do
+
+  defstruct [x: (F64) 0.0,
+             y: (F64) 0.0,
+             vx: (F64) 0.0,
+             vy: (F64) 0.0,
+             dmg: (F64) 0.0,
+             tex: (U32) 0,
+             sc: (F64) 0.3,
+             life: (F64) 4.0]
+
+end
+
+defmodule DoomMsg do
+
+  defstruct [text: "",
+             t: (F64) 0.0]
+
+end
+
+defmodule DoomLevelState do
+
+  defstruct [li: (Uw) 0,
+             ldef: %DoomLevel{},
+             kills: (F64) 0.0,
+             total: (F64) 0.0,
+             facts: (F64) 0.0,
+             ftotal: (F64) 0.0,
+             time: (F64) 0.0,
+             intro: (F64) 3.5,
+             shot_t: (F64) 0.0]
+
+end
+
+defmodule DoomGlobal do
+
+  defstruct [kills: (F64) 0.0,
+             total: (F64) 0.0,
+             facts: (F64) 0.0,
+             ftotal: (F64) 0.0,
+             time: (F64) 0.0]
+
+end
+
+defmodule DoomState do
+
+  defstruct [state: :title,
+             state_t: (F64) 0.0,
+             time: (F64) 0.0,
+             show_map: false,
+             player: %DoomPlayer{},
+             snap: %DoomPlayer{},
+             level: %DoomLevelState{},
+             mobs: [],
+             items: [],
+             projs: [],
+             msgs: [],
+             tip_i: (Uw) 0,
+             global: %DoomGlobal{},
+             sfx: [],
+             has_thomas: false,
+             tx: (F64) 0.0,
+             ty: (F64) 0.0]
+
+end
+
+defmodule DoomGame do
+
+  def mob_of = fn (c) {
+    if (c == (U8) 115) do
+      :segv
+    else
+      if (c == (U8) 108) do
+        :leak
+      else
+        if (c == (U8) 114) do
+          :race
+        else
+          if (c == (U8) 100) do
+            :dfree
+          else
+            if (c == (U8) 66) do :boss else void end
+          end
+        end
+      end
+    end
+  }
+
+  def item_of = fn (c) {
+    if (c == (U8) 99) do
+      "c"
+    else
+      if (c == (U8) 97) do
+        "a"
+      else
+        if (c == (U8) 102) do
+          "f"
+        else
+          if (c == (U8) 103) do
+            "g"
+          else
+            if (c == (U8) 122) do
+              "z"
+            else
+              if (c == (U8) 118) do "v" else void end
+            end
+          end
+        end
+      end
+    end
+  }
+
+  def new_mob = fn (t, x, y) {
+    ty = DoomTypes.get(t)
+    %DoomMob{t: t, x: x, y: y, hp: ty.hp, anim: DoomRand.rand() * (F64) 2.0,
+             sp: ty.sp, sc: ty.sc, ranged: ty.ranged, melee: ty.melee,
+             rate: ty.rate, dmg: ty.dmg, keep: ty.keep, flick: ty.flick}
+  }
+
+  def set_state = fn (s, st) {
+    %DoomState{s | state: st, state_t: (F64) 0.0}
+  }
+
+  def sfx = fn (s, name) {
+    %DoomState{s | sfx: [name | s.sfx]}
+  }
+
+  def msg = fn (s, text, t) {
+    l = List.append_one(s.msgs, %DoomMsg{text: text, t: t})
+    if (DoomList.len(l) > (Uw) 4) do
+      l = List.next(l)
+    end
+    %DoomState{s | msgs: l}
+  }
+
+  def move = fn (x, y, mx, my, r) {
+    nx = if DoomEngine.blocked(x + mx, y, r) do x else x + mx end
+    ny = if DoomEngine.blocked(nx, y + my, r) do y else y + my end
+    {nx, ny}
+  }
+
+  def load_level = fn (s, li) {
+    d = DoomList.nth(DoomLevels.all, li)
+    DoomEngine.grid_load(d.map)
+    p = s.player
+    p = %DoomPlayer{p | a: d.a, cd: (F64) 0.0, fire_t: (F64) 0.0,
+                    hurt_t: (F64) 0.0, grin_t: (F64) 0.0}
+    mobs = []
+    items = []
+    total = (F64) 0.0
+    ftotal = (F64) 0.0
+    has_t = false
+    tx = (F64) 0.0
+    ty = (F64) 0.0
+    rows = d.map
+    y = (Uw) 0
+    while (rows != []) do
+      [row | rest] = ^ rows
+      w = (Uw) Str.size(row)
+      x = (Uw) 0
+      while (x < w) do
+        c = Str.char(row, x)
+        fx = (F64) x + (F64) 0.5
+        fy = (F64) y + (F64) 0.5
+        if (c == (U8) 80) do
+          p = %DoomPlayer{p | x: fx, y: fy}
+        end
+        if (c == (U8) 84) do
+          has_t = true
+          tx = ^ fx
+          ty = ^ fy
+        end
+        mt = DoomGame.mob_of(c)
+        if (mt != void) do
+          mobs = [DoomGame.new_mob(mt, fx, fy) | mobs]
+          total = total + (F64) 1.0
+        end
+        ik = DoomGame.item_of(c)
+        if (ik != void) do
+          items = [%DoomItem{k: ik, x: fx, y: fy} | items]
+          if (ik == "f") do
+            ftotal = ftotal + (F64) 1.0
+          end
+        end
+        x = (Uw) (x + 1)
+      end
+      rows = ^ rest
+      y = (Uw) (y + 1)
+    end
+    lvl = %DoomLevelState{li: li, ldef: d, total: total, ftotal: ftotal}
+    %DoomState{s | player: p, level: lvl, mobs: mobs, items: items,
+                   projs: [], msgs: [], has_thomas: has_t, tx: tx,
+                   ty: ty}
+  }
+
+  def new_game = fn (s) {
+    s = %DoomState{s | player: %DoomPlayer{}, global: %DoomGlobal{}}
+    s = DoomGame.load_level(s, (Uw) 0)
+    s = %DoomState{s | snap: s.player}
+    DoomGame.set_state(s, :play)
+  }
+
+  def restart = fn (s) {
+    sn = s.snap
+    p = %DoomPlayer{sn | hp: DoomMath.max(sn.hp, (F64) 50.0)}
+    s = %DoomState{s | player: p}
+    s = DoomGame.load_level(s, s.level.li)
+    DoomGame.set_state(s, :play)
+  }
+
+  def next_level = fn (s) {
+    s = DoomGame.load_level(s, (Uw) (s.level.li + 1))
+    s = %DoomState{s | snap: s.player}
+    DoomGame.set_state(s, :play)
+  }
+
+  def click = fn (s) {
+    if (s.state_t < (F64) 0.5) do
+      s
+    else
+      st = s.state
+      if (st == :title) do
+        DoomGame.new_game(s)
+      else
+        if (st == :pause) do
+          DoomGame.set_state(s, :play)
+        else
+          if (st == :inter) do
+            DoomGame.next_level(s)
+          else
+            if (st == :dead) do
+              DoomGame.restart(s)
+            else
+              if (st == :win) do
+                s = %DoomState{s | player: %DoomPlayer{}}
+                s = DoomGame.load_level(s, (Uw) 0)
+                DoomGame.set_state(s, :title)
+              else
+                s
+              end
+            end
+          end
+        end
+      end
+    end
+  }
+
+  def boss_alive = fn (mobs) {
+    alive = false
+    rest = ^ mobs
+    while (rest != []) do
+      [e | tail] = ^ rest
+      if ((e.t == :boss) && (! e.dead)) do
+        alive = true
+      end
+      rest = ^ tail
+    end
+    alive
+  }
+
+  def hurt_player = fn (s, n) {
+    if (s.state != :play) do
+      s
+    else
+      p = s.player
+      a = DoomMath.min(p.armor, DoomMath.floor(n / (F64) 3.0))
+      hp = p.hp - (n - a)
+      s = DoomGame.sfx(s, :hurt)
+      if (hp <= (F64) 0.0) do
+        s = %DoomState{s | player: %DoomPlayer{p | armor: p.armor - a,
+                                                   hp: (F64) 0.0,
+                                                   hurt_t: (F64) 0.3}}
+        s = DoomGame.sfx(s, :die)
+        DoomGame.set_state(s, :dead)
+      else
+        %DoomState{s | player: %DoomPlayer{p | armor: p.armor - a, hp: hp,
+                                               hurt_t: (F64) 0.3}}
+      end
+    end
+  }
+
+  def hurt_mob = fn (s, idx, n) {
+    e = DoomList.nth(s.mobs, idx)
+    ty = DoomTypes.get(e.t)
+    e = %DoomMob{e | hp: e.hp - n, alert: true}
+    if ((! ty.no_pain) && (DoomRand.rand() < (F64) 0.7)) do
+      e = %DoomMob{e | pain: (F64) 0.18}
+    end
+    if ((e.hp <= (F64) 0.0) && (! e.dead)) do
+      e = %DoomMob{e | dead: true}
+      lvl = s.level
+      s = %DoomState{s | mobs: DoomList.set_nth(s.mobs, idx, e),
+                         level: %DoomLevelState{lvl | kills: lvl.kills +
+                                                        (F64) 1.0}}
+      s = DoomGame.sfx(s, :die)
+      k = (Uw) (DoomRand.rand() * (F64) DoomList.len(ty.msg))
+      s = DoomGame.msg(s, DoomList.nth(ty.msg, k), (F64) 3.5)
+      if ty.split do
+        s = DoomGame.split(s, e)
+      end
+      if (e.t == :boss) do
+        s = DoomGame.msg(s, "La prod tient. Le terminal git push est libre.",
+                         (F64) 6.0)
+        p = s.player
+        s = %DoomState{s | player: %DoomPlayer{p | grin_t: (F64) 3.0}}
+      end
+      s
+    else
+      s = %DoomState{s | mobs: DoomList.set_nth(s.mobs, idx, e)}
+      DoomGame.sfx(s, :hit)
+    end
+  }
+
+  def split = fn (s, e) {
+    base = DoomMath.atan2(s.player.y - e.y, s.player.x - e.x)
+    mobs = s.mobs
+    side = (F64) -1.0
+    while (side < (F64) 2.0) do
+      a = base + side * DoomMath.pi / (F64) 2.0
+      c = DoomGame.new_mob(:free1, e.x, e.y)
+      {nx, ny} = DoomGame.move(c.x, c.y, F64.cos(a) * (F64) 0.35,
+                               F64.sin(a) * (F64) 0.35, (F64) 0.2)
+      mobs = List.append_one(mobs, %DoomMob{c | x: nx, y: ny, alert: true})
+      side = side + (F64) 2.0
+    end
+    lvl = s.level
+    %DoomState{s | mobs: mobs,
+                   level: %DoomLevelState{lvl | total: lvl.total +
+                                                  (F64) 2.0}}
+  }
+
+  def fire = fn (s) {
+    p = s.player
+    w = DoomList.nth(DoomWeapons.all, p.weapon)
+    if (p.cd > (F64) 0.0) do
+      s
+    else
+      if (p.ammo < (F64) w.ammo) do
+        s = %DoomState{s | player: %DoomPlayer{p | cd: (F64) 0.4}}
+        s = DoomGame.sfx(s, :click)
+        DoomGame.msg(s, "Plus de breakpoints !", (F64) 1.5)
+      else
+        p = %DoomPlayer{p | ammo: p.ammo - (F64) w.ammo, cd: w.cd,
+                            fire_t: (F64) 0.12}
+        s = %DoomState{s | player: p}
+        s = DoomGame.sfx(s, w.sfx)
+        s = DoomGame.alert_near(s)
+        i = (Uw) 0
+        while (i < (Uw) w.pellets) do
+          s = DoomGame.pellet(s, w)
+          i = (Uw) (i + 1)
+        end
+        s
+      end
+    end
+  }
+
+  def alert_near = fn (s) {
+    px = s.player.x
+    py = s.player.y
+    out = []
+    rest = s.mobs
+    while (rest != []) do
+      [e | tail] = ^ rest
+      if (! e.dead) do
+        d = DoomMath.hypot(e.x - px, e.y - py)
+        if ((d < (F64) 5.0) ||
+            ((d < (F64) 10.0) && DoomEngine.los(e.x, e.y, px, py))) do
+          e = %DoomMob{e | alert: true}
+        end
+      end
+      out = [e | out]
+      rest = ^ tail
+    end
+    %DoomState{s | mobs: List.reverse(out)}
+  }
+
+  def pellet = fn (s, w) {
+    px = s.player.x
+    py = s.player.y
+    a = s.player.a + (DoomRand.rand() - (F64) 0.5) * (F64) 2.0 * w.spread
+    dx = F64.cos(a)
+    dy = F64.sin(a)
+    bd = DoomEngine.cast(px, py, dx, dy)
+    found = false
+    best = (Uw) 0
+    hit_t = false
+    idx = (Uw) 0
+    rest = s.mobs
+    while (rest != []) do
+      [e | tail] = ^ rest
+      if (! e.dead) do
+        ex = e.x - px
+        ey = e.y - py
+        al = ex * dx + ey * dy
+        if ((al > (F64) 0.0) && (al < bd) &&
+            (DoomMath.fabs(ex * dy - ey * dx) <
+             (F64) 0.3 * e.sc + (F64) 0.06)) do
+          bd = ^ al
+          best = ^ idx
+          found = true
+        end
+      end
+      idx = (Uw) (idx + 1)
+      rest = ^ tail
+    end
+    if s.has_thomas do
+      ex = s.tx - px
+      ey = s.ty - py
+      al = ex * dx + ey * dy
+      if ((al > (F64) 0.0) && (al < bd) &&
+          (DoomMath.fabs(ex * dy - ey * dx) < (F64) 0.3)) do
+        found = false
+        hit_t = true
+      end
+    end
+    if found do
+      s = DoomGame.hurt_mob(s, best,
+                            w.dmin + DoomRand.rand() * (w.dmax - w.dmin))
+    end
+    if (hit_t && (s.level.shot_t <= (F64) 0.0)) do
+      s = DoomGame.msg(s, "Thomas : « On tire sur les bugs, pas sur le mainteneur. »",
+                       (F64) 4.0)
+      lvl = s.level
+      s = %DoomState{s | level: %DoomLevelState{lvl | shot_t: (F64) 4.0}}
+    end
+    s
+  }
+
+  def shoot = fn (s, e, ty) {
+    n = (F64) ty.burst
+    base = DoomMath.atan2(s.player.y - e.y, s.player.x - e.x)
+    boss = (e.t == :boss)
+    v = if boss do (F64) 5.0 else (F64) 6.0 end
+    tex = if boss do DoomTex.bproj else DoomTex.proj end
+    sc = if boss do (F64) 0.45 else (F64) 0.3 end
+    projs = s.projs
+    i = (F64) 0.0
+    while (i < n) do
+      a = base + (i - (n - (F64) 1.0) / (F64) 2.0) * (F64) 0.13 +
+        (DoomRand.rand() - (F64) 0.5) * (F64) 0.08
+      pr = %DoomProj{x: e.x + F64.cos(a) * (F64) 0.4,
+                     y: e.y + F64.sin(a) * (F64) 0.4,
+                     vx: F64.cos(a) * v,
+                     vy: F64.sin(a) * v,
+                     dmg: ty.dmg,
+                     tex: tex,
+                     sc: sc}
+      projs = [pr | projs]
+      i = i + (F64) 1.0
+    end
+    s = %DoomState{s | projs: projs}
+    DoomGame.sfx(s, :fire)
+  }
+
+  def use_key = fn (s) {
+    px = s.player.x
+    py = s.player.y
+    dx = F64.cos(s.player.a)
+    dy = F64.sin(s.player.a)
+    d = DoomEngine.cast(px, py, dx, dy)
+    if (d > (F64) 1.6) do
+      s
+    else
+      cx = (U32) DoomMath.floor(px + dx * (d + (F64) 0.01))
+      cy = (U32) DoomMath.floor(py + dy * (d + (F64) 0.01))
+      c = DoomEngine.grid_get(cx, cy)
+      if (c == (U8) 68) do
+        DoomEngine.grid_set(cx, cy, (U8) 46)
+        DoomGame.sfx(s, :door)
+      else
+        if (c == (U8) 88) do
+          DoomGame.exit(s)
+        else
+          s
+        end
+      end
+    end
+  }
+
+  def exit = fn (s) {
+    if DoomGame.boss_alive(s.mobs) do
+      s = DoomGame.msg(s, "La prod crashe encore. Trouve env->err d'abord.",
+                       (F64) 3.5)
+      DoomGame.sfx(s, :click)
+    else
+      g = s.global
+      l = s.level
+      g = %DoomGlobal{g | kills: g.kills + l.kills,
+                          total: g.total + l.total,
+                          facts: g.facts + l.facts,
+                          ftotal: g.ftotal + l.ftotal,
+                          time: g.time + l.time}
+      s = %DoomState{s | global: g}
+      s = DoomGame.sfx(s, :win)
+      if ((l.li + (Uw) 1) < (Uw) DoomLevels.count) do
+        DoomGame.set_state(s, :inter)
+      else
+        DoomGame.set_state(s, :win)
+      end
+    end
+  }
+
+  def take = fn (s, it) {
+    p = s.player
+    k = it.k
+    took = true
+    if (k == "c") do
+      if (p.hp >= (F64) 100.0) do
+        took = false
+      else
+        p = %DoomPlayer{p | hp: DoomMath.min((F64) 100.0, p.hp + (F64) 25.0)}
+        s = DoomGame.msg(s, "Café kmx. +25 santé.", (F64) 3.5)
+      end
+    end
+    if (k == "a") do
+      if (p.ammo >= (F64) 300.0) do
+        took = false
+      else
+        p = %DoomPlayer{p | ammo: DoomMath.min((F64) 300.0,
+                                               p.ammo + (F64) 20.0)}
+        s = DoomGame.msg(s, "+20 breakpoints.", (F64) 3.5)
+      end
+    end
+    if (k == "f") do
+      lvl = s.level
+      s = %DoomState{s | level: %DoomLevelState{lvl | facts: lvl.facts +
+                                                       (F64) 1.0}}
+      tip = DoomList.nth(DoomTips.all,
+                         (Uw) (s.tip_i mod DoomList.len(DoomTips.all)))
+      s = %DoomState{s | tip_i: (Uw) (s.tip_i + 1)}
+      s = DoomGame.msg(s, tip, (F64) 5.0)
+    end
+    if (k == "g") do
+      p = %DoomPlayer{p | owned: [true, true, List.last(p.owned)],
+                          weapon: (Uw) 1, ammo: p.ammo + (F64) 10.0,
+                          grin_t: (F64) 1.5}
+      s = DoomGame.msg(s, "gdb ! Touche 2.", (F64) 3.5)
+    end
+    if (k == "z") do
+      p = %DoomPlayer{p | owned: [true, DoomList.nth(p.owned, (Uw) 1), true],
+                          weapon: (Uw) 2, ammo: p.ammo + (F64) 40.0,
+                          grin_t: (F64) 1.5}
+      s = DoomGame.msg(s, "ASan ! Touche 3.", (F64) 3.5)
+    end
+    if (k == "v") do
+      if (p.armor >= (F64) 100.0) do
+        took = false
+      else
+        p = %DoomPlayer{p | armor: DoomMath.min((F64) 100.0,
+                                                p.armor + (F64) 50.0)}
+        s = DoomGame.msg(s, "Suite de tests : +50 couverture.", (F64) 3.5)
+      end
+    end
+    if took do
+      p = %DoomPlayer{p | pick_t: (F64) 0.15}
+      s = %DoomState{s | player: p}
+      s = DoomGame.sfx(s, :pick)
+      {s, %DoomItem{it | taken: true}}
+    else
+      {s, it}
+    end
+  }
+
+  def pickups = fn (s) {
+    out = []
+    rest = s.items
+    while (rest != []) do
+      [it | tail] = ^ rest
+      if ((! it.taken) &&
+          (DoomMath.hypot(it.x - s.player.x, it.y - s.player.y) <
+           (F64) 0.55)) do
+        {s, it} = DoomGame.take(s, it)
+      end
+      out = [it | out]
+      rest = ^ tail
+    end
+    %DoomState{s | items: out}
+  }
+
+  def mob_step = fn (s, e, dt) {
+    px = s.player.x
+    py = s.player.y
+    e = %DoomMob{e | pain: e.pain - dt, atk: e.atk - dt, cd: e.cd - dt}
+    ex = px - e.x
+    ey = py - e.y
+    d = DoomMath.hypot(ex, ey)
+    sees = (d < (F64) 16.0) && DoomEngine.los(e.x, e.y, px, py)
+    if ((! e.alert) && sees && (d < (F64) 11.0)) do
+      e = %DoomMob{e | alert: true,
+                       cd: (F64) 0.4 + DoomRand.rand()}
+    end
+    if (e.alert && (e.pain <= (F64) 0.0)) do
+      if (e.ranged && sees && (d < (F64) 12.0) && (d > (F64) 1.0) &&
+          (e.cd <= (F64) 0.0)) do
+        s = DoomGame.shoot(s, e, DoomTypes.get(e.t))
+        e = %DoomMob{e | cd: e.rate * ((F64) 0.6 +
+                                        DoomRand.rand() * (F64) 0.8),
+                         atk: (F64) 0.35}
+      end
+      if (e.melee && (d < (F64) 0.95) && (e.cd <= (F64) 0.0)) do
+        s = DoomGame.hurt_player(s, e.dmg)
+        e = %DoomMob{e | cd: e.rate, atk: (F64) 0.3}
+      end
+      keep = if e.melee do
+               (F64) 0.75
+             else
+               if sees do e.keep else (F64) 0.8 end
+             end
+      if ((d > keep) && (e.atk <= (F64) 0.0)) do
+        ux = ex / d
+        uy = ey / d
+        if e.flick do
+          j = F64.sin(s.time * (F64) 6.0 + e.anim * (F64) 3.0) * (F64) 0.8
+          ox = ^ ux
+          ux = ux - uy * j
+          uy = uy + ox * j
+        end
+        n = DoomMath.hypot(ux, uy)
+        sp = e.sp * dt
+        {nx, ny} = DoomGame.move(e.x, e.y, ux / n * sp, uy / n * sp,
+                                 DoomConfig.radius)
+        e = %DoomMob{e | x: nx, y: ny,
+                         anim: e.anim + dt * e.sp * (F64) 2.0}
+      end
+    end
+    {s, e}
+  }
+
+  def mobs_update = fn (s, dt) {
+    out = []
+    rest = s.mobs
+    s = %DoomState{s | mobs: []}
+    while (rest != []) do
+      [e | tail] = ^ rest
+      if (! e.dead) do
+        {s, e} = DoomGame.mob_step(s, e, dt)
+      end
+      out = [e | out]
+      rest = ^ tail
+    end
+    %DoomState{s | mobs: List.append(List.reverse(out), s.mobs)}
+  }
+
+  def projs_update = fn (s, dt) {
+    out = []
+    rest = s.projs
+    while (rest != []) do
+      [pr | tail] = ^ rest
+      x = pr.x + pr.vx * dt
+      y = pr.y + pr.vy * dt
+      life = pr.life - dt
+      if DoomEngine.blocked(x, y, (F64) 0.0) do
+        life = (F64) 0.0
+      else
+        if (DoomMath.hypot(x - s.player.x, y - s.player.y) < (F64) 0.35) do
+          s = DoomGame.hurt_player(s, pr.dmg)
+          life = (F64) 0.0
+        end
+      end
+      if (life > (F64) 0.0) do
+        out = [%DoomProj{pr | x: x, y: y, life: life} | out]
+      end
+      rest = ^ tail
+    end
+    %DoomState{s | projs: out}
+  }
+
+  def msgs_update = fn (s, dt) {
+    out = []
+    rest = s.msgs
+    while (rest != []) do
+      [m | tail] = ^ rest
+      t = m.t - dt
+      if (t > (F64) 0.0) do
+        out = [%DoomMsg{m | t: t} | out]
+      end
+      rest = ^ tail
+    end
+    %DoomState{s | msgs: List.reverse(out)}
+  }
+
+  def update_play = fn (s, dt) {
+    p = s.player
+    p = %DoomPlayer{p | cd: p.cd - dt,
+                        fire_t: p.fire_t - dt,
+                        hurt_t: p.hurt_t - dt,
+                        grin_t: p.grin_t - dt,
+                        pick_t: p.pick_t - dt,
+                        moving: DoomMath.max((F64) 0.0,
+                                             p.moving - dt * (F64) 6.0)}
+    lvl = s.level
+    lvl = %DoomLevelState{lvl | time: lvl.time + dt,
+                                intro: lvl.intro - dt,
+                                shot_t: lvl.shot_t - dt}
+    s = %DoomState{s | player: p, level: lvl}
+    s = DoomGame.pickups(s)
+    s = DoomGame.mobs_update(s, dt)
+    s = DoomGame.projs_update(s, dt)
+    DoomGame.msgs_update(s, dt)
+  }
+
+  def walk = fn (s, fw, st) {
+    p = s.player
+    dx = F64.cos(p.a)
+    dy = F64.sin(p.a)
+    mx = (dx * fw - dy * st) * DoomConfig.step
+    my = (dy * fw + dx * st) * DoomConfig.step
+    {nx, ny} = DoomGame.move(p.x, p.y, mx, my, DoomConfig.radius)
+    %DoomState{s | player: %DoomPlayer{p | x: nx, y: ny, moving: (F64) 1.0,
+                                           bob: p.bob + (F64) 0.35}}
+  }
+
+  def turn = fn (s, dir) {
+    p = s.player
+    %DoomState{s | player: %DoomPlayer{p | a: p.a + dir * DoomConfig.turn}}
+  }
+
+  def select = fn (s, n) {
+    p = s.player
+    if DoomList.nth(p.owned, n) do
+      %DoomState{s | player: %DoomPlayer{p | weapon: n}}
+    else
+      s
+    end
+  }
+
+  def wheel = fn (s, delta) {
+    p = s.player
+    n = (Uw) ((p.weapon + delta) mod (Uw) 3)
+    if DoomList.nth(p.owned, n) do
+      %DoomState{s | player: %DoomPlayer{p | weapon: n}}
+    else
+      n = (Uw) ((n + delta) mod (Uw) 3)
+      DoomGame.select(s, n)
+    end
+  }
+
+  def play_key = fn (s, k) {
+    if ((k == (U32) 101) || (k == (U32) 32)) do
+      DoomGame.use_key(s)
+    else
+      if ((k == (U32) 65362) || (k == (U32) 119) || (k == (U32) 122)) do
+        DoomGame.walk(s, (F64) 1.0, (F64) 0.0)
+      else
+        if ((k == (U32) 65364) || (k == (U32) 115)) do
+          DoomGame.walk(s, (F64) -1.0, (F64) 0.0)
+        else
+          if ((k == (U32) 97) || (k == (U32) 113)) do
+            DoomGame.walk(s, (F64) 0.0, (F64) -1.0)
+          else
+            if (k == (U32) 100) do
+              DoomGame.walk(s, (F64) 0.0, (F64) 1.0)
+            else
+              DoomGame.play_key_2(s, k)
+            end
+          end
+        end
+      end
+    end
+  }
+
+  def play_key_2 = fn (s, k) {
+    if (k == (U32) 65361) do
+      DoomGame.turn(s, (F64) -1.0)
+    else
+      if (k == (U32) 65363) do
+        DoomGame.turn(s, (F64) 1.0)
+      else
+        if ((k >= (U32) 49) && (k <= (U32) 51)) do
+          DoomGame.select(s, (Uw) (k - (U32) 49))
+        else
+          if ((k == (U32) 109) || (k == (U32) 65289)) do
+            %DoomState{s | show_map: (! s.show_map)}
+          else
+            if (k == (U32) 112) do
+              DoomGame.set_state(s, :pause)
+            else
+              if (k == (U32) 65507) do DoomGame.fire(s) else s end
+            end
+          end
+        end
+      end
+    end
+  }
+
+  def sprites = fn (s) {
+    out = []
+    rest = s.mobs
+    while (rest != []) do
+      [e | tail] = ^ rest
+      skip = e.flick && (! e.dead) && (DoomRand.rand() < (F64) 0.25)
+      if (! skip) do
+        tex = if e.dead do
+                DoomMobTex.dead(e.t)
+              else
+                if (e.atk > (F64) 0.0) do
+                  DoomMobTex.atk(e.t)
+                else
+                  DoomMobTex.walk(e.t, (U32) ((Uw) e.anim mod (Uw) 2))
+                end
+              end
+        out = [{e.x, e.y, tex, e.sc, (F64) 0.0,
+                (e.pain > (F64) 0.0) && (! e.dead)} | out]
+      end
+      rest = ^ tail
+    end
+    rest = s.items
+    while (rest != []) do
+      [it | tail] = ^ rest
+      if (! it.taken) do
+        {tex, sc, lift} = DoomItems.get(it.k)
+        if (lift != (F64) 0.0) do
+          lift = lift + F64.sin(s.time * (F64) 3.0 + it.x) * (F64) 0.05
+        end
+        out = [{it.x, it.y, tex, sc, lift, false} | out]
+      end
+      rest = ^ tail
+    end
+    if s.has_thomas do
+      th = (U32) (DoomTex.thomas_0 +
+                  (U32) ((Uw) (s.time * (F64) 1.5) mod (Uw) 2))
+      out = [{s.tx, s.ty, th, (F64) 0.9, (F64) 0.0, false} | out]
+    end
+    rest = s.projs
+    while (rest != []) do
+      [pr | tail] = ^ rest
+      out = [{pr.x, pr.y, pr.tex, pr.sc, (F64) 0.35, false} | out]
+      rest = ^ tail
+    end
+    out
+  }
+
+  def thomas_line = fn (s) {
+    p = s.player
+    if (s.has_thomas &&
+        (DoomMath.hypot(s.tx - p.x, s.ty - p.y) < (F64) 2.6) &&
+        DoomEngine.los(p.x, p.y, s.tx, s.ty)) do
+      lines = s.level.ldef.thomas
+      DoomList.nth(lines, (Uw) ((Uw) (s.time / (F64) 3.0) mod
+                                DoomList.len(lines)))
+    else
+      void
+    end
+  }
+
+  def hud = fn (s) {
+    p = s.player
+    l = s.level
+    g = s.global
+    w = DoomList.nth(DoomWeapons.all, p.weapon)
+    msgs = List.map(s.msgs, fn (m) { {m.text, m.t} })
+    mobs = []
+    rest = s.mobs
+    while (rest != []) do
+      [e | tail] = ^ rest
+      if (! e.dead) do
+        mobs = [{e.x, e.y} | mobs]
+      end
+      rest = ^ tail
+    end
+    thomas = if s.has_thomas do {s.tx, s.ty} else void end
+    %{state_t: s.state_t, time: s.time, fire_t: p.fire_t,
+      hurt_t: p.hurt_t, pick_t: p.pick_t, grin_t: p.grin_t, bob: p.bob,
+      moving: p.moving, level_time: l.time, intro: l.intro,
+      g_time: g.time, hp: p.hp, armor: p.armor, ammo: p.ammo,
+      weapon: (F64) p.weapon, kills: l.kills, total: l.total,
+      facts: l.facts, ftotal: l.ftotal, g_kills: g.kills,
+      g_total: g.total, g_facts: g.facts, g_ftotal: g.ftotal,
+      owned: p.owned, weapon_name: w.name, level_name: l.ldef.name,
+      level_sub: l.ldef.sub, outro: l.ldef.outro, msgs: msgs,
+      thomas_line: DoomGame.thomas_line(s), thomas: thomas,
+      show_map: s.show_map, mobs: mobs}
+  }
+
+end
+
+defmodule Doom do
+
+  def init = fn (w, h) {
+    DoomRand.seed((S64) 7)
+    s = %DoomState{}
+    DoomGame.load_level(s, (Uw) 0)
+  }
+
+  def update = fn (s, dt) {
+    s = %DoomState{s | sfx: [], time: s.time + dt,
+                       state_t: s.state_t + dt}
+    if (s.state == :play) do
+      DoomGame.update_play(s, dt)
+    else
+      if (s.state == :title) do
+        p = s.player
+        %DoomState{s | player: %DoomPlayer{p | a: p.a + dt * (F64) 0.2}}
+      else
+        s
+      end
+    end
+  }
+
+  def key = fn (s, k) {
+    if (s.state != :play) do
+      if ((k == (U32) 65293) || (k == (U32) 32)) do
+        DoomGame.click(s)
+      else
+        s
+      end
+    else
+      DoomGame.play_key(s, k)
+    end
+  }
+
+  def key_up = fn (s, k) {
+    s
+  }
+
+  def button = fn (s, b, x, y) {
+    if (s.state == :play) do
+      if (b == (U8) 1) do
+        DoomGame.fire(s)
+      else
+        if (b == (U8) 4) do
+          DoomGame.wheel(s, (Uw) 2)
+        else
+          if (b == (U8) 5) do DoomGame.wheel(s, (Uw) 1) else s end
+        end
+      end
+    else
+      if (b == (U8) 1) do DoomGame.click(s) else s end
+    end
+  }
+
+  def motion = fn (s, x, y) {
+    s
+  }
+
+  def view = fn (s) {
+    p = s.player
+    d = s.level.ldef
+    {s.state, p.x, p.y, p.a, d.floor, d.ceil, d.fog,
+     DoomGame.sprites(s), DoomGame.hud(s), List.reverse(s.sfx)}
+  }
+
+end
