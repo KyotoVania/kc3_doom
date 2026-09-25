@@ -3,3 +3,5 @@ kmx_doom
 src/*.o
 *.kc3c
 *.core
+logs/
+tests/out/
