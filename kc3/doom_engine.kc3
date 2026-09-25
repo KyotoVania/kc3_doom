@@ -1,0 +1,15 @@
+defmodule DoomEngine do
+
+  def los = cfn Bool "kmx_doom_los" (F64, F64, F64, F64)
+
+  def cast = cfn F64 "kmx_doom_cast" (F64, F64, F64, F64)
+
+  def blocked = cfn Bool "kmx_doom_blocked" (F64, F64, F64)
+
+  def grid_load = cfn Bool "kmx_doom_grid_load" (List)
+
+  def grid_set = cfn Bool "kmx_doom_grid_set" (U32, U32, U8)
+
+  def grid_get = cfn U8 "kmx_doom_grid_get" (U32, U32)
+
+end
