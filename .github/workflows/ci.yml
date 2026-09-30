@@ -82,7 +82,7 @@ jobs:
         run: |
           mkdir _published
           git archive FETCH_HEAD | tar -x -C _published
-      - uses: actions/upload-pages-artifact@v4
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: _published
       - name: Deploy
