@@ -1,4 +1,6 @@
-# KMX DOOM, port kc3 + window/cairo (xcb)
+# KMX DOOM — plan technique historique
+
+Ce document conserve le plan initial et ses anciens contrats ; il ne décrit pas tout l'état actuel. Le projet vise à refaire un jeu inspiré de Doom en kc3, et non à porter une version HTML comme finalité. Voir `HANDOFF.md` pour l'architecture actuelle et `README.md` pour la présentation publique.
 
 Source : `kmx_doom.html` (550 lignes JS). Les numéros de ligne ci-dessous renvoient à ce fichier.
 

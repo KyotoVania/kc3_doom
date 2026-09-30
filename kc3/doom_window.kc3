@@ -1,0 +1,5 @@
+defmodule DoomWindow do
+
+  def run = cfn Bool "kmx_doom_window_run" (Str, U64, U64, Tag, Tag)
+
+end

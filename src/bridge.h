@@ -19,6 +19,9 @@ s_engine * kmx_doom_engine (void);
 s_hud *    kmx_doom_hud (void);
 bool       kmx_doom_view_read (const s_tag *view, s_kmx_doom_view *dest);
 
+bool       kmx_doom_engine_init (void);
+void       kmx_doom_engine_clean (void);
+bool       kmx_doom_engine_draw (void **window, s_tag *view);
 bool       kmx_doom_blocked (f64 x, f64 y, f64 r);
 f64        kmx_doom_cast (f64 x, f64 y, f64 dx, f64 dy);
 u8         kmx_doom_grid_get (u32 x, u32 y);

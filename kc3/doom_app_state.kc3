@@ -1,0 +1,6 @@
+defmodule DoomAppState do
+
+  defstruct [game: %DoomState{},
+             frames: (U64) 0]
+
+end

@@ -5,3 +5,9 @@ src/*.o
 *.core
 logs/
 tests/out/
+_site/
+__pycache__/
+*.pyc
+.env
+.env.*
+kc3.dump

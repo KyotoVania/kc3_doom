@@ -1,0 +1,259 @@
+defmodule WindowContract do
+
+  def t = fn (ok, label) {
+    if ok do
+      (U64) 0
+    else
+      puts("FAIL #{label}")
+      (U64) 1
+    end
+  }
+
+  def step = fn (s, e) {
+    if (s == e) do
+      {true, (U64) (s + (U64) 1)}
+    else
+      :error
+    end
+  }
+
+  def ld = fn (s, w) {
+    WindowContract.step(s, (U64) 0)
+  }
+
+  def rd = fn (s, w, dt) {
+    if (s == (U64) 1) do
+      WindowContract.step(s, (U64) 1)
+    else
+      WindowContract.step(s, (U64) 2)
+    end
+  }
+
+  def bt = fn (s, w, b, x, y) {
+    WindowContract.step(s, (U64) 3)
+  }
+
+  def mo = fn (s, w, x, y) {
+    if (s == (U64) 4) do
+      WindowContract.step(s, (U64) 4)
+    else
+      WindowContract.step(s, (U64) 5)
+    end
+  }
+
+  def rz = fn (s, w, width, height) {
+    WindowContract.step(s, (U64) 6)
+  }
+
+  def ky = fn (s, w, k) {
+    if (s == (U64) 7) do
+      {false, (U64) 8}
+    else
+      :error
+    end
+  }
+
+  def ul = fn (s, w) {
+    WindowContract.step(s, (U64) 8)
+  }
+
+  def ul_seen = fn (s, w) {
+    if (s == (U64) 8) do
+      {(U64) 1, s}
+    else
+      {true, s}
+    end
+  }
+
+  def bad2 = fn (s, w) {
+    :error
+  }
+
+  def bad3 = fn (s, w, a) {
+    :error
+  }
+
+  def bad4 = fn (s, w, a, b) {
+    :error
+  }
+
+  def bad5 = fn (s, w, a, b, c) {
+    :error
+  }
+
+  def bare3 = fn (s, w, a) {
+    true
+  }
+
+  def short3 = fn (s, w, a) {
+    {true}
+  }
+
+  def kind3 = fn (s, w, a) {
+    {(U64) 1, s}
+  }
+
+  def long3 = fn (s, w, a) {
+    {true, s, s}
+  }
+
+  def kind2 = fn (s, w) {
+    {(U64) 1, s}
+  }
+
+  def cbs = fn (l, r, k, b, m, z, u) {
+    %{load: l, render: r, key: k, button: b, motion: m, resize: z,
+      unload: u}
+  }
+
+  def good = fn () {
+    WindowContract.cbs(WindowContract.ld, WindowContract.rd,
+                       WindowContract.ky, WindowContract.bt,
+                       WindowContract.mo, WindowContract.rz,
+                       WindowContract.ul)
+  }
+
+  def run = fn (cbs) {
+    DoomWindow.run("contract", (U64) 200, (U64) 100, cbs, (U64) 0)
+  }
+
+  def rejects = fn (cbs, label) {
+    WindowContract.t(! WindowContract.run(cbs), label)
+  }
+
+end
+
+defmodule DoomApp do
+
+  def main = fn () {
+    fails = (U64) 0
+    good = WindowContract.good()
+
+    fails = (U64) (fails + WindowContract.t(WindowContract.run(good),
+                                            "1 good callbacks accepted"))
+
+    fails = (U64) (fails + WindowContract.rejects((U64) 1, "2 map not a map"))
+    fails = (U64) (fails + WindowContract.rejects(%{}, "3 empty map"))
+
+    fails = (U64) (fails + WindowContract.rejects(
+      %{load: WindowContract.ld, render: WindowContract.rd,
+        button: WindowContract.bt, motion: WindowContract.mo,
+        resize: WindowContract.rz, unload: WindowContract.ul},
+      "4 missing key"))
+    fails = (U64) (fails + WindowContract.rejects(
+      %{load: WindowContract.ld, render: WindowContract.rd,
+        key: WindowContract.ky, button: WindowContract.bt,
+        motion: WindowContract.mo, resize: WindowContract.rz},
+      "5 missing unload"))
+
+    fails = (U64) (fails + WindowContract.rejects(
+      WindowContract.cbs(WindowContract.ld, WindowContract.rd,
+                         (U64) 1, WindowContract.bt, WindowContract.mo,
+                         WindowContract.rz, WindowContract.ul),
+      "6 key not callable"))
+    fails = (U64) (fails + WindowContract.rejects(
+      WindowContract.cbs(:load, WindowContract.rd, WindowContract.ky,
+                         WindowContract.bt, WindowContract.mo,
+                         WindowContract.rz, WindowContract.ul),
+      "7 load not callable"))
+
+    fails = (U64) (fails + WindowContract.t(
+      ! DoomWindow.run("contract", (U64) 0, (U64) 100, good, (U64) 0),
+      "8 zero width rejected"))
+    fails = (U64) (fails + WindowContract.t(
+      ! DoomWindow.run("contract", (U64) 100, (U64) 20000, good, (U64) 0),
+      "9 huge height rejected"))
+
+    fails = (U64) (fails + WindowContract.rejects(
+      WindowContract.cbs(WindowContract.bad2, WindowContract.rd,
+                         WindowContract.ky, WindowContract.bt,
+                         WindowContract.mo, WindowContract.rz,
+                         WindowContract.ul),
+      "10 load :error"))
+    fails = (U64) (fails + WindowContract.rejects(
+      WindowContract.cbs(WindowContract.ld, WindowContract.bad3,
+                         WindowContract.ky, WindowContract.bt,
+                         WindowContract.mo, WindowContract.rz,
+                         WindowContract.ul),
+      "11 render :error"))
+    fails = (U64) (fails + WindowContract.rejects(
+      WindowContract.cbs(WindowContract.ld, WindowContract.bare3,
+                         WindowContract.ky, WindowContract.bt,
+                         WindowContract.mo, WindowContract.rz,
+                         WindowContract.ul),
+      "12 render bare true"))
+    fails = (U64) (fails + WindowContract.rejects(
+      WindowContract.cbs(WindowContract.ld, WindowContract.short3,
+                         WindowContract.ky, WindowContract.bt,
+                         WindowContract.mo, WindowContract.rz,
+                         WindowContract.ul),
+      "13 render 1-tuple"))
+    fails = (U64) (fails + WindowContract.rejects(
+      WindowContract.cbs(WindowContract.ld, WindowContract.kind3,
+                         WindowContract.ky, WindowContract.bt,
+                         WindowContract.mo, WindowContract.rz,
+                         WindowContract.ul),
+      "14 render non-Bool head"))
+    fails = (U64) (fails + WindowContract.rejects(
+      WindowContract.cbs(WindowContract.ld, WindowContract.long3,
+                         WindowContract.ky, WindowContract.bt,
+                         WindowContract.mo, WindowContract.rz,
+                         WindowContract.ul),
+      "15 render 3-tuple"))
+    fails = (U64) (fails + WindowContract.rejects(
+      WindowContract.cbs(WindowContract.ld, WindowContract.rd,
+                         WindowContract.bad3, WindowContract.bt,
+                         WindowContract.mo, WindowContract.rz,
+                         WindowContract.ul),
+      "16 key :error"))
+    fails = (U64) (fails + WindowContract.rejects(
+      WindowContract.cbs(WindowContract.ld, WindowContract.rd,
+                         WindowContract.ky, WindowContract.bad5,
+                         WindowContract.mo, WindowContract.rz,
+                         WindowContract.ul),
+      "17 button :error"))
+    fails = (U64) (fails + WindowContract.rejects(
+      WindowContract.cbs(WindowContract.ld, WindowContract.rd,
+                         WindowContract.ky, WindowContract.bt,
+                         WindowContract.bad4, WindowContract.rz,
+                         WindowContract.ul),
+      "18 motion :error"))
+    fails = (U64) (fails + WindowContract.rejects(
+      WindowContract.cbs(WindowContract.ld, WindowContract.rd,
+                         WindowContract.ky, WindowContract.bt,
+                         WindowContract.mo, WindowContract.bad4,
+                         WindowContract.ul),
+      "19 resize :error"))
+
+    fails = (U64) (fails + WindowContract.rejects(
+      WindowContract.cbs(WindowContract.ld, WindowContract.rd,
+                         WindowContract.ky, WindowContract.bt,
+                         WindowContract.mo, WindowContract.rz,
+                         WindowContract.bad2),
+      "20 unload :error"))
+    fails = (U64) (fails + WindowContract.rejects(
+      WindowContract.cbs(WindowContract.ld, WindowContract.rd,
+                         WindowContract.ky, WindowContract.bt,
+                         WindowContract.mo, WindowContract.rz,
+                         WindowContract.kind2),
+      "21 unload malformed"))
+    fails = (U64) (fails + WindowContract.rejects(
+      WindowContract.cbs(WindowContract.ld, WindowContract.rd,
+                         WindowContract.ky, WindowContract.bt,
+                         WindowContract.mo, WindowContract.rz,
+                         WindowContract.ul_seen),
+      "22 unload runs with threaded state"))
+
+    fails = (U64) (fails + WindowContract.t(WindowContract.run(good),
+                                            "23 good again after failures"))
+
+    if (fails == (U64) 0) do
+      puts("window_contract_test: OK")
+      true
+    else
+      puts("window_contract_test: #{fails} FAIL")
+      false
+    end
+  }
+
+end

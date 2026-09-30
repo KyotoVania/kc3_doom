@@ -1,0 +1,59 @@
+defmodule DoomWindow do
+
+  def t = fn (ok, label) {
+    if ok do
+      (U64) 0
+    else
+      puts("FAIL #{label}")
+      (U64) 1
+    end
+  }
+
+  def run = fn (title, w, h, cbs, a) {
+    f = (U64) 0
+    f = (U64) (f + DoomWindow.t(title == "KMX DOOM", "stub title"))
+    f = (U64) (f + DoomWindow.t(w == (U64) 800, "stub width"))
+    f = (U64) (f + DoomWindow.t(h == (U64) 400, "stub height"))
+    f = (U64) (f + DoomWindow.t(Map.count(cbs) == (Uw) 7, "stub 7 callbacks"))
+    f = (U64) (f + DoomWindow.t(a.frames == (U64) 0, "stub initial frames"))
+    ld = cbs.load
+    rd = cbs.render
+    ky = cbs.key
+    bt = cbs.button
+    mo = cbs.motion
+    rz = cbs.resize
+    ul = cbs.unload
+    win = (U64) 77
+    r = ld(a, win)
+    {ok, a} = ^ r
+    f = (U64) (f + DoomWindow.t(ok, "stub load true"))
+    f = (U64) (f + DoomWindow.t(a.frames == (U64) 0, "stub load frames"))
+    f = (U64) (f + DoomWindow.t(a.game.state == :title, "stub load state"))
+    r = rd(a, win, (F64) 0.016)
+    {ok, a} = ^ r
+    f = (U64) (f + DoomWindow.t(ok && (a.frames == (U64) 1), "stub render 1"))
+    r = rd(a, win, (F64) 10.0)
+    {ok, a} = ^ r
+    f = (U64) (f + DoomWindow.t(ok && (a.frames == (U64) 2), "stub render 2"))
+    r = bt(a, win, (U8) 1, (S64) 10, (S64) 10)
+    {ok, a} = ^ r
+    f = (U64) (f + DoomWindow.t(ok, "stub button"))
+    r = mo(a, win, (S64) 100, (S64) 100)
+    {ok, a} = ^ r
+    f = (U64) (f + DoomWindow.t(ok, "stub motion"))
+    r = rz(a, win, (U64) 1600, (U64) 800)
+    {ok, a} = ^ r
+    f = (U64) (f + DoomWindow.t(ok && (a.frames == (U64) 2), "stub resize"))
+    r = ky(a, win, (U32) 32)
+    {ok, a} = ^ r
+    f = (U64) (f + DoomWindow.t(ok, "stub key continues"))
+    r = ky(a, win, (U32) 65307)
+    {ok, a} = ^ r
+    f = (U64) (f + DoomWindow.t(! ok, "stub escape stops"))
+    r = ul(a, win)
+    {ok, a} = ^ r
+    f = (U64) (f + DoomWindow.t(ok, "stub unload"))
+    f == (U64) 0
+  }
+
+end

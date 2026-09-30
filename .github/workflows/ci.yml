@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native:
+    name: Native tests (${{ matrix.cc }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        cc: [gcc, clang]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - run: sudo apt-get update && sudo apt-get install -y build-essential clang pkg-config libcairo2-dev
+      - run: sh tests/run_native.sh
+        env:
+          CC: ${{ matrix.cc }}
+
+  site:
+    name: Presentation checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - run: python3 -m unittest discover -s tests -p 'site_test.py' -v
+      - run: python3 tools/build_site.py --output _site --repository "$SITE_REPOSITORY" --revision "$SITE_REVISION"
+        env:
+          SITE_REPOSITORY: ${{ github.repository }}
+          SITE_REVISION: ${{ github.sha }}
+      - run: python3 -c 'import re, pathlib; print("\n".join(re.findall(r"<script>(.*?)</script>", pathlib.Path("_site/index.html").read_text(), re.S)))' | node --check
+
+  pages:
+    name: Publish presentation
+    needs: [native, site]
+    if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && vars.PUBLISH_PAGES == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/configure-pages@v5
+      - run: python3 tools/build_site.py --output _site --repository "$SITE_REPOSITORY" --revision "$SITE_REVISION"
+        env:
+          SITE_REPOSITORY: ${{ github.repository }}
+          SITE_REVISION: ${{ github.sha }}
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,5 +1,6 @@
 /* kc3
  * Copyright from 2022 to 2026 kmx.io <contact@kmx.io>
+ * Copyright 2026 KyotoVania
  *
  * Permission is hereby granted to use this software granted the above
  * copyright notice and this permission paragraph are included in all
@@ -13,10 +14,12 @@
 #include "libkc3/kc3.h"
 #include <math.h>
 #include <string.h>
+#include "window/cairo/window_cairo.h"
 #include "bridge.h"
 
 #define KMX_DOOM_STR_MAX 256
 
+static bool     g_engine_ready = false;
 static s_engine g_engine;
 static s_hud    g_hud;
 static char     g_hud_weapon_name[KMX_DOOM_STR_MAX];
@@ -463,5 +466,65 @@ static bool kmx_doom_tag_str (const s_tag *tag, char *dest, uw size)
     len = size - 1;
   memcpy(dest, tag->data.td_str.ptr.p_pchar, len);
   dest[len] = 0;
+  return true;
+}
+
+bool kmx_doom_engine_init (void)
+{
+  if (g_engine_ready)
+    return true;
+  if (! engine_init(&g_engine)) {
+    err_puts("kmx_doom_engine_init: engine_init failed");
+    return false;
+  }
+  if (! textures_init(&g_engine)) {
+    err_puts("kmx_doom_engine_init: textures_init failed");
+    engine_clean(&g_engine);
+    return false;
+  }
+  g_engine_ready = true;
+  return true;
+}
+
+void kmx_doom_engine_clean (void)
+{
+  if (! g_engine_ready)
+    return;
+  engine_clean(&g_engine);
+  g_engine_ready = false;
+}
+
+bool kmx_doom_engine_draw (void **window, s_tag *view)
+{
+  cairo_t *cr;
+  s_kmx_doom_view v;
+  s_window_cairo *w;
+  if (! g_engine_ready) {
+    err_puts("kmx_doom_engine_draw: engine not initialized");
+    return false;
+  }
+  if (! window || ! *window || ! view) {
+    err_puts("kmx_doom_engine_draw: invalid arguments");
+    return false;
+  }
+  w = *window;
+  cr = w->cr;
+  if (! cr) {
+    err_puts("kmx_doom_engine_draw: no cairo context");
+    return false;
+  }
+  if (! kmx_doom_view_read(view, &v))
+    return false;
+  engine_render(&g_engine, v.px, v.py, v.pa, v.floor_tex, v.ceil_tex,
+                v.fog);
+  cairo_save(cr);
+  cairo_set_source_rgb(cr, 0.0, 0.0, 0.0);
+  cairo_paint(cr);
+  cairo_restore(cr);
+  engine_blit(&g_engine, cr, w->w, w->h);
+  cairo_save(cr);
+  cairo_scale(cr, (double) w->w / ENGINE_W, (double) w->h / ENGINE_H);
+  hud_draw(cr, &g_hud, &g_engine);
+  cairo_restore(cr);
   return true;
 }

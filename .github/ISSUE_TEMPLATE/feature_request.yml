@@ -1,0 +1,52 @@
+name: Demande de fonctionnalité
+description: Proposer une amélioration du jeu, du moteur ou de l'outillage
+title: "[FEAT] "
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Les pistes déjà identifiées sont listées dans `HANDOFF.md` section 8
+        (textures et HUD en kc3, relâchement de touche, souris relative, son…).
+        Vérifiez si votre idée s'y rattache.
+  - type: textarea
+    id: probleme
+    attributes:
+      label: Problème ou motivation
+      description: Quel manque ou quel coût cette fonctionnalité adresse-t-elle ?
+    validations:
+      required: true
+  - type: textarea
+    id: proposition
+    attributes:
+      label: Proposition
+      description: Décrivez le comportement attendu et, si possible, l'approche.
+    validations:
+      required: true
+  - type: dropdown
+    id: cote
+    attributes:
+      label: Côté d'implémentation envisagé
+      description: La tendance du projet est « le plus kc3 possible » à coût maîtrisé.
+      options:
+        - kc3 (logique, données, application)
+        - C (primitives chaudes, adaptateurs)
+        - Les deux
+        - Je ne sais pas
+    validations:
+      required: true
+  - type: textarea
+    id: mesure
+    attributes:
+      label: Plan de mesure (si performance)
+      description: |
+        Toute optimisation se prouve par une mesure avant/après (`ms/frame` de
+        `tests/game_test.kc3` ou micro-bench dédié). Comment mesureriez-vous le gain ?
+  - type: textarea
+    id: tests
+    attributes:
+      label: Impact sur les tests
+      description: |
+        Les six tests historiques doivent rester verts. Un changement de contrat
+        (`engine.h`, `hud.h`, tuple de vue, Map `hud`) se répercute sur
+        `src/bridge.c` et `tests/view_check.kc3`.

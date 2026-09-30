@@ -1,0 +1,59 @@
+name: Rapport de bug
+description: Signaler un comportement incorrect du jeu, du build ou des tests
+title: "[BUG] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Merci d'avoir lu `HANDOFF.md` (section 6 : limitations connues) pour vérifier
+        que le comportement n'est pas déjà documenté.
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Que s'est-il passé, et qu'attendiez-vous ?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: |
+        Commandes exactes depuis `kc3/kc3_doom/` (par exemple `./configure && make && make run`,
+        ou `sh tests/run_all.sh`), et gestes en jeu le cas échéant.
+      placeholder: |
+        1. ./configure && make
+        2. make run
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sorties et journaux
+      description: |
+        Extraits pertinents de la console ou de `tests/out/*.log` (copiez seulement
+        les passages utiles, pas les fichiers entiers). Masquez les secrets,
+        jetons, données personnelles et chemins privés avant publication.
+      render: sh
+  - type: textarea
+    id: environnement
+    attributes:
+      label: Environnement
+      description: OS, version/commit du checkout kc3 parent, version de Cairo
+      placeholder: |
+        OS : Linux …
+        kc3 : commit …
+        cairo : …
+    validations:
+      required: true
+  - type: checkboxes
+    id: verifications
+    attributes:
+      label: Vérifications
+      options:
+        - label: J'ai lu HANDOFF.md et ce n'est pas une limitation connue.
+          required: true
+        - label: J'ai relancé `sh tests/run_all.sh` pour vérifier l'état des tests.
+          required: false

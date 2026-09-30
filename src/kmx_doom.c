@@ -1,5 +1,6 @@
 /* kc3
  * Copyright from 2022 to 2026 kmx.io <contact@kmx.io>
+ * Copyright 2026 KyotoVania
  *
  * Permission is hereby granted to use this software granted the above
  * copyright notice and this permission paragraph are included in all
@@ -12,250 +13,93 @@
  */
 #include "libkc3/kc3.h"
 #include "window/cairo/window_cairo.h"
-#include "window/cairo/xcb/window_cairo_xcb.h"
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <time.h>
 #include "bridge.h"
-
-#define KMX_DOOM_SCALE      2
-#define KMX_DOOM_KEY_ESCAPE 0xff1b
-
-typedef struct kmx_doom {
-  s_tag           fn_button;
-  s_tag           fn_init;
-  s_tag           fn_key;
-  s_tag           fn_motion;
-  s_tag           fn_update;
-  s_tag           fn_view;
-  s_tag           state;
-  struct timespec last;
-} s_kmx_doom;
+#include "window_binding.h"
 
 const char *g_env_argv0_default = PROG;
+
 const char *g_env_argv0_dir_default = PREFIX;
 
 static const char *g_kmx_doom_files[] = {
   "kc3/data.kc3",
   "kc3/doom_engine.kc3",
   "kc3/game.kc3",
+  "kc3/doom_window.kc3",
+  "kc3/doom_app_state.kc3",
+  "kc3/doom_app.kc3",
   NULL
 };
 
-static s_kmx_doom g_kmx_doom = {0};
-
-static bool kmx_doom_button (s_window_cairo *window, u8 button,
-                             s64 x, s64 y);
-static bool kmx_doom_call (s_tag *fn, s_list *arguments,
-                           s_tag *dest);
-static bool kmx_doom_call_state (s_tag *fn, s_list *arguments);
-static bool kmx_doom_fn (const char *name, s_tag *dest);
-static bool kmx_doom_key (s_window_cairo *window, u32 keysym);
-static bool kmx_doom_load (s_window_cairo *window);
-static bool kmx_doom_motion (s_window_cairo *window, s64 x, s64 y);
-static bool kmx_doom_render (s_window_cairo *window);
-static bool kmx_doom_resize (s_window_cairo *window, u64 w, u64 h);
-static void kmx_doom_unload (s_window_cairo *window);
+static bool kmx_doom_load_file (const char *path);
+static bool kmx_doom_main (void);
 
 int main (int argc, char **argv)
 {
-  s_window_cairo window;
+  int i;
+  int r = 1;
   if (! kc3_init(NULL, &argc, &argv)) {
     err_puts("kc3_init");
     return 1;
   }
   kc3_window_cairo_init();
-  window_cairo_init(&window, 0, 0,
-                    ENGINE_W * KMX_DOOM_SCALE,
-                    ENGINE_H * KMX_DOOM_SCALE,
-                    "KMX DOOM", 1);
-  window.button = kmx_doom_button;
-  window.key    = kmx_doom_key;
-  window.load   = kmx_doom_load;
-  window.motion = kmx_doom_motion;
-  window.render = kmx_doom_render;
-  window.resize = kmx_doom_resize;
-  window.unload = kmx_doom_unload;
-  if (! window_cairo_xcb_run(&window)) {
-    err_puts("window_cairo_xcb_run -> false");
-    window_cairo_clean(&window);
-    kc3_window_cairo_clean();
-    kc3_clean(NULL);
-    return g_kc3_exit_code;
+  for (i = 0; g_kmx_doom_files[i]; i++)
+    if (! kmx_doom_load_file(g_kmx_doom_files[i]))
+      goto clean;
+  for (i = 0; i < argc; i++) {
+    if (strcmp(argv[i], "--load") || i + 1 == argc) {
+      err_puts("usage: kmx_doom [--load file]");
+      goto clean;
+    }
+    if (! kmx_doom_load_file(argv[++i]))
+      goto clean;
   }
-  window_cairo_clean(&window);
+  if (kmx_doom_main())
+    r = 0;
+  else if (g_kc3_exit_code != 0)
+    err_puts("DoomApp.main -> false");
+ clean:
+  kmx_doom_engine_clean();
   kc3_window_cairo_clean();
   kc3_clean(NULL);
-  return 0;
-}
-
-static bool kmx_doom_button (s_window_cairo *window, u8 button,
-                             s64 x, s64 y)
-{
-  (void) window;
-  return kmx_doom_call_state(&g_kmx_doom.fn_button,
-                             list_new_u8(button,
-                                         list_new_s64(x,
-                                                      list_new_s64(y,
-                                                                   NULL))));
-}
-
-static bool kmx_doom_call (s_tag *fn, s_list *arguments, s_tag *dest)
-{
-  bool r;
-  r = eval_callable_call(fn->data.td_pcallable, arguments, dest);
-  list_delete_all(arguments);
-  if (! r)
-    err_puts("kmx_doom_call: eval_callable_call failed");
   return r;
 }
 
-static bool kmx_doom_call_state (s_tag *fn, s_list *arguments)
+static bool kmx_doom_load_file (const char *path)
 {
-  s_tag tmp = {0};
-  if (! kmx_doom_call(fn, list_new_tag_copy(&g_kmx_doom.state,
-                                            arguments), &tmp))
+  s_str str = {0};
+  str_init_1(&str, NULL, path);
+  if (! kc3_load(&str)) {
+    err_write_1("kmx_doom_load_file: kc3_load failed: ");
+    err_puts(path);
     return false;
-  tag_clean(&g_kmx_doom.state);
-  g_kmx_doom.state = tmp;
+  }
   return true;
 }
 
-static bool kmx_doom_fn (const char *name, s_tag *dest)
+static bool kmx_doom_main (void)
 {
   s_ident ident;
-  ident_init(&ident, sym_1("Doom"), sym_1(name));
-  if (! env_ident_get(env_global(), &ident, dest)) {
-    err_write_1("kmx_doom_fn: not found: Doom.");
-    err_puts(name);
+  s_tag fn = {0};
+  s_tag result = {0};
+  bool r;
+  ident_init(&ident, sym_1("DoomApp"), sym_1("main"));
+  if (! env_ident_get(env_global(), &ident, &fn)) {
+    err_puts("kmx_doom_main: DoomApp.main not found");
     return false;
   }
-  if (dest->type != TAG_PCALLABLE) {
-    err_write_1("kmx_doom_fn: not a Callable: Doom.");
-    err_puts(name);
-    tag_clean(dest);
+  if (fn.type != TAG_PCALLABLE) {
+    err_puts("kmx_doom_main: DoomApp.main is not a Callable");
+    tag_clean(&fn);
     return false;
   }
-  return true;
-}
-
-static bool kmx_doom_key (s_window_cairo *window, u32 keysym)
-{
-  (void) window;
-  if (keysym == KMX_DOOM_KEY_ESCAPE) {
-    g_kc3_exit_code = 0;
+  if (! eval_callable_call(fn.data.td_pcallable, NULL, &result)) {
+    err_puts("kmx_doom_main: DoomApp.main failed");
+    tag_clean(&fn);
     return false;
   }
-  return kmx_doom_call_state(&g_kmx_doom.fn_key,
-                             list_new_u32(keysym, NULL));
-}
-
-static bool kmx_doom_load (s_window_cairo *window)
-{
-  uw i;
-  s_str path = {0};
-  (void) window;
-  if (! engine_init(kmx_doom_engine())) {
-    err_puts("kmx_doom_load: engine_init failed");
-    return false;
-  }
-  if (! textures_init(kmx_doom_engine())) {
-    err_puts("kmx_doom_load: textures_init failed");
-    return false;
-  }
-  for (i = 0; g_kmx_doom_files[i]; i++) {
-    str_init_1(&path, NULL, g_kmx_doom_files[i]);
-    if (! kc3_load(&path)) {
-      err_write_1("kmx_doom_load: kc3_load failed: ");
-      err_puts(g_kmx_doom_files[i]);
-      return false;
-    }
-  }
-  if (! kmx_doom_fn("button", &g_kmx_doom.fn_button) ||
-      ! kmx_doom_fn("init",   &g_kmx_doom.fn_init) ||
-      ! kmx_doom_fn("key",    &g_kmx_doom.fn_key) ||
-      ! kmx_doom_fn("motion", &g_kmx_doom.fn_motion) ||
-      ! kmx_doom_fn("update", &g_kmx_doom.fn_update) ||
-      ! kmx_doom_fn("view",   &g_kmx_doom.fn_view))
-    return false;
-  if (! kmx_doom_call(&g_kmx_doom.fn_init,
-                      list_new_u32(ENGINE_W,
-                                   list_new_u32(ENGINE_H, NULL)),
-                      &g_kmx_doom.state))
-    return false;
-  clock_gettime(CLOCK_MONOTONIC, &g_kmx_doom.last);
-  return true;
-}
-
-static bool kmx_doom_motion (s_window_cairo *window, s64 x, s64 y)
-{
-  (void) window;
-  return kmx_doom_call_state(&g_kmx_doom.fn_motion,
-                             list_new_s64(x, list_new_s64(y, NULL)));
-}
-
-static bool kmx_doom_render (s_window_cairo *window)
-{
-  cairo_t *cr;
-  f64 dt;
-  s_engine *engine;
-  struct timespec now;
-  s_kmx_doom_view v;
-  s_tag view = {0};
-  cr = window->cr;
-  engine = kmx_doom_engine();
-  clock_gettime(CLOCK_MONOTONIC, &now);
-  dt = (f64) (now.tv_sec - g_kmx_doom.last.tv_sec) +
-    (f64) (now.tv_nsec - g_kmx_doom.last.tv_nsec) / 1e9;
-  g_kmx_doom.last = now;
-  if (dt > 0.05)
-    dt = 0.05;
-  if (! kmx_doom_call_state(&g_kmx_doom.fn_update,
-                            list_new_f64(dt, NULL)))
-    return false;
-  if (! kmx_doom_call(&g_kmx_doom.fn_view,
-                      list_new_tag_copy(&g_kmx_doom.state, NULL),
-                      &view))
-    return false;
-  if (! kmx_doom_view_read(&view, &v)) {
-    tag_clean(&view);
-    return false;
-  }
-  tag_clean(&view);
-  engine_render(engine, v.px, v.py, v.pa, v.floor_tex, v.ceil_tex,
-                v.fog);
-  cairo_save(cr);
-  cairo_set_source_rgb(cr, 0.0, 0.0, 0.0);
-  cairo_paint(cr);
-  cairo_restore(cr);
-  engine_blit(engine, cr, window->w, window->h);
-  cairo_save(cr);
-  cairo_scale(cr, (double) window->w / ENGINE_W,
-              (double) window->h / ENGINE_H);
-  hud_draw(cr, kmx_doom_hud(), engine);
-  cairo_restore(cr);
-  return true;
-}
-
-static bool kmx_doom_resize (s_window_cairo *window, u64 w, u64 h)
-{
-  (void) window;
-  (void) w;
-  (void) h;
-  return true;
-}
-
-static void kmx_doom_unload (s_window_cairo *window)
-{
-  (void) window;
-  engine_clean(kmx_doom_engine());
-  tag_clean(&g_kmx_doom.state);
-  tag_clean(&g_kmx_doom.fn_view);
-  tag_clean(&g_kmx_doom.fn_update);
-  tag_clean(&g_kmx_doom.fn_motion);
-  tag_clean(&g_kmx_doom.fn_key);
-  tag_clean(&g_kmx_doom.fn_init);
-  tag_clean(&g_kmx_doom.fn_button);
-  memset(&g_kmx_doom, 0, sizeof(g_kmx_doom));
+  r = result.type == TAG_BOOL && result.data.td_bool_;
+  tag_clean(&result);
+  tag_clean(&fn);
+  return r;
 }

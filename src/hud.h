@@ -1,5 +1,6 @@
 /* kc3
  * Copyright from 2022 to 2026 kmx.io <contact@kmx.io>
+ * Copyright 2026 KyotoVania
  *
  * Permission is hereby granted to use this software granted the above
  * copyright notice and this permission paragraph are included in all

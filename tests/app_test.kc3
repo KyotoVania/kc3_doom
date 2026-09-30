@@ -1,0 +1,139 @@
+load("kc3/data.kc3")
+load("tests/engine_stub.kc3")
+load("kc3/game.kc3")
+load("kc3/doom_app_state.kc3")
+load("tests/window_stub.kc3")
+load("kc3/doom_app.kc3")
+
+defmodule DoomEngine do
+
+  def init = fn () {
+    true
+  }
+
+  def close = fn () {
+    :ok
+  }
+
+  def draw = fn (w, v) {
+    w == (U64) 77
+  }
+
+end
+
+defmodule AppCheck do
+
+  def t = fn (ok, label) {
+    if ok do
+      (U64) 0
+    else
+      puts("FAIL #{label}")
+      (U64) 1
+    end
+  }
+
+end
+
+fails = (U64) 0
+win = (U64) 77
+
+fails = (U64) (fails + AppCheck.t(DoomApp.main(), "1 main through window stub"))
+
+fails = (U64) (fails + AppCheck.t(DoomApp.clamp((F64) 10.0) == (F64) 0.05,
+                                  "2 clamp high"))
+fails = (U64) (fails + AppCheck.t(DoomApp.clamp((F64) -1.0) == (F64) 0.0,
+                                  "2 clamp negative"))
+fails = (U64) (fails + AppCheck.t(DoomApp.clamp((F64) 0.016) == (F64) 0.016,
+                                  "2 clamp passthrough"))
+
+r = DoomApp.on_load(%DoomAppState{}, win)
+{ok, a} = ^ r
+fails = (U64) (fails + AppCheck.t(ok && (a.frames == (U64) 0) &&
+                                  (a.game.state == :title),
+                                  "3 load builds game"))
+
+r = DoomApp.on_render(a, win, (F64) 0.0)
+{ok, a1} = ^ r
+fails = (U64) (fails + AppCheck.t(ok && (a1.frames == (U64) 1),
+                                  "4 first frame dt 0"))
+fails = (U64) (fails + AppCheck.t(a1.game == Doom.update(a.game, (F64) 0.0),
+                                  "4 first frame updates game"))
+
+r = DoomApp.on_render(a, win, (F64) 10.0)
+{ok, a2} = ^ r
+fails = (U64) (fails + AppCheck.t(a2.game == Doom.update(a.game, (F64) 0.05),
+                                  "5 dt clamped high"))
+r = DoomApp.on_render(a, win, (F64) -3.0)
+{ok, a3} = ^ r
+fails = (U64) (fails + AppCheck.t(a3.game == Doom.update(a.game, (F64) 0.0),
+                                  "5 dt clamped negative"))
+
+r = DoomApp.on_render(a1, win, (F64) 0.016)
+{ok, a4} = ^ r
+fails = (U64) (fails + AppCheck.t(ok && (a4.frames == (U64) 2),
+                                  "6 frames accumulate"))
+fails = (U64) (fails + AppCheck.t(a4.game == Doom.update(a1.game,
+                                                         (F64) 0.016),
+                                  "6 state threaded"))
+
+r = DoomApp.on_render(a, (U64) 5, (F64) 0.016)
+fails = (U64) (fails + AppCheck.t(r == :error, "7 window reaches draw"))
+
+r = DoomApp.on_key(a, win, (U32) 65307)
+fails = (U64) (fails + AppCheck.t(r == {false, a}, "8 escape stops"))
+r = DoomApp.on_key(a, win, (U32) 32)
+{ok, ak} = ^ r
+fails = (U64) (fails + AppCheck.t(ok && (ak.game == Doom.key(a.game,
+                                                             (U32) 32)),
+                                  "9 other key continues"))
+
+r = DoomApp.on_button(a, win, (U8) 1, (S64) 3, (S64) 4)
+{ok, ab} = ^ r
+fails = (U64) (fails + AppCheck.t(ok && (ab.game == Doom.button(a.game, (U8) 1,
+                                                                (S64) 3,
+                                                                (S64) 4)),
+                                  "10 button"))
+
+r = DoomApp.on_motion(a, win, (S64) 3, (S64) 4)
+{ok, am} = ^ r
+fails = (U64) (fails + AppCheck.t(ok && (am.game == Doom.motion(a.game,
+                                                                 (S64) 3,
+                                                                 (S64) 4)),
+                                  "11 motion"))
+
+r = DoomApp.on_resize(a, win, (U64) 1, (U64) 2)
+fails = (U64) (fails + AppCheck.t(r == {true, a}, "12 resize"))
+r = DoomApp.on_unload(a, win)
+fails = (U64) (fails + AppCheck.t(r == {true, a}, "13 unload"))
+
+defmodule DoomEngine do
+
+  def draw = fn (w, v) {
+    false
+  }
+
+end
+
+load("kc3/doom_app.kc3")
+
+r = DoomApp.on_render(a, win, (F64) 0.016)
+fails = (U64) (fails + AppCheck.t(r == :error, "14 draw failure is error"))
+
+defmodule DoomEngine do
+
+  def init = fn () {
+    false
+  }
+
+end
+
+load("kc3/doom_app.kc3")
+
+r = DoomApp.on_load(%DoomAppState{}, win)
+fails = (U64) (fails + AppCheck.t(r == :error, "15 init failure is error"))
+
+if (fails == (U64) 0) do
+  puts("app_test: OK")
+else
+  puts("app_test: #{fails} FAIL")
+end

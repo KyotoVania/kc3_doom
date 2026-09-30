@@ -62,6 +62,8 @@ defmodule DoomConfig do
 
   def turn = (F64) 0.08
 
+  def mouse = (F64) 0.004
+
   def radius = (F64) 0.25
 
 end
@@ -180,7 +182,9 @@ defmodule DoomState do
              sfx: [],
              has_thomas: false,
              tx: (F64) 0.0,
-             ty: (F64) 0.0]
+             ty: (F64) 0.0,
+             mouse_x: (F64) 0.0,
+             mouse_on: false]
 
 end
 
@@ -238,7 +242,7 @@ defmodule DoomGame do
   }
 
   def set_state = fn (s, st) {
-    %DoomState{s | state: st, state_t: (F64) 0.0}
+    %DoomState{s | state: st, state_t: (F64) 0.0, mouse_on: false}
   }
 
   def sfx = fn (s, name) {
@@ -836,6 +840,16 @@ defmodule DoomGame do
     %DoomState{s | player: %DoomPlayer{p | a: p.a + dir * DoomConfig.turn}}
   }
 
+  def look = fn (s, x) {
+    if s.mouse_on do
+      p = s.player
+      da = (x - s.mouse_x) * DoomConfig.mouse
+      %DoomState{s | player: %DoomPlayer{p | a: p.a + da}, mouse_x: x}
+    else
+      %DoomState{s | mouse_x: x, mouse_on: true}
+    end
+  }
+
   def select = fn (s, n) {
     p = s.player
     if DoomList.nth(p.owned, n) do
@@ -1051,7 +1065,11 @@ defmodule Doom do
   }
 
   def motion = fn (s, x, y) {
-    s
+    if (s.state == :play) do
+      DoomGame.look(s, (F64) x)
+    else
+      s
+    end
   }
 
   def view = fn (s) {

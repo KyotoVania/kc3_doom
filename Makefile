@@ -2,18 +2,21 @@ include config.mk
 
 PROG = kmx_doom
 OBJECTS = src/kmx_doom.o src/bridge.o src/engine.o src/textures.o \
-	src/hud.o
+	src/hud.o src/window_binding.o
 
 all: ${PROG}
 
 ${PROG}: ${OBJECTS}
 	${CC} ${CFLAGS} -o ${PROG} ${OBJECTS} ${LDFLAGS} ${LIBS}
 
-src/kmx_doom.o: src/kmx_doom.c src/bridge.h src/engine.h src/hud.h config.mk
+src/kmx_doom.o: src/kmx_doom.c src/bridge.h src/window_binding.h src/engine.h src/hud.h config.mk
 	${CC} ${CPPFLAGS} ${CFLAGS} -Isrc -c src/kmx_doom.c -o src/kmx_doom.o
 
 src/bridge.o: src/bridge.c src/bridge.h src/engine.h src/hud.h config.mk
 	${CC} ${CPPFLAGS} ${CFLAGS} -Isrc -c src/bridge.c -o src/bridge.o
+
+src/window_binding.o: src/window_binding.c src/window_binding.h config.mk
+	${CC} ${CPPFLAGS} ${CFLAGS} -Isrc -c src/window_binding.c -o src/window_binding.o
 
 src/engine.o: src/engine.c src/engine.h config.mk
 	${CC} ${CPPFLAGS} ${CFLAGS} -Isrc -c src/engine.c -o src/engine.o

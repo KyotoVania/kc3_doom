@@ -1,5 +1,11 @@
 defmodule DoomEngine do
 
+  def init = cfn Bool "kmx_doom_engine_init" ()
+
+  def close = cfn Void "kmx_doom_engine_clean" ()
+
+  def draw = cfn Bool "kmx_doom_engine_draw" (Ptr, Tag)
+
   def los = cfn Bool "kmx_doom_los" (F64, F64, F64, F64)
 
   def cast = cfn F64 "kmx_doom_cast" (F64, F64, F64, F64)

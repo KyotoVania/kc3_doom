@@ -1,0 +1,81 @@
+defmodule DoomApp do
+
+  def title = "KMX DOOM"
+
+  def width = (U64) 800
+
+  def height = (U64) 400
+
+  def escape = (U32) 65307
+
+  def dt_max = (F64) 0.05
+
+  def clamp = fn (dt) {
+    if (dt > DoomApp.dt_max) do
+      DoomApp.dt_max
+    else
+      if (dt < (F64) 0.0) do (F64) 0.0 else dt end
+    end
+  }
+
+  def on_load = fn (a, w) {
+    if (! DoomEngine.init()) do
+      :error
+    else
+      g = Doom.init((U32) 400, (U32) 250)
+      {true, %DoomAppState{a | game: g}}
+    end
+  }
+
+  def on_render = fn (a, w, dt) {
+    g = Doom.update(a.game, DoomApp.clamp(dt))
+    v = Doom.view(g)
+    ok = DoomEngine.draw(w, v)
+    if ok do
+      {true, %DoomAppState{a | game: g, frames: (U64) (a.frames + 1)}}
+    else
+      :error
+    end
+  }
+
+  def on_key = fn (a, w, k) {
+    if (k == DoomApp.escape) do
+      {false, a}
+    else
+      {true, %DoomAppState{a | game: Doom.key(a.game, k)}}
+    end
+  }
+
+  def on_button = fn (a, w, b, x, y) {
+    {true, %DoomAppState{a | game: Doom.button(a.game, b, x, y)}}
+  }
+
+  def on_motion = fn (a, w, x, y) {
+    {true, %DoomAppState{a | game: Doom.motion(a.game, x, y)}}
+  }
+
+  def on_resize = fn (a, w, width, height) {
+    {true, a}
+  }
+
+  def on_unload = fn (a, w) {
+    DoomEngine.close()
+    {true, a}
+  }
+
+  def callbacks = fn () {
+    %{load: DoomApp.on_load,
+      render: DoomApp.on_render,
+      key: DoomApp.on_key,
+      button: DoomApp.on_button,
+      motion: DoomApp.on_motion,
+      resize: DoomApp.on_resize,
+      unload: DoomApp.on_unload}
+  }
+
+  def main = fn () {
+    DoomWindow.run(DoomApp.title, DoomApp.width, DoomApp.height,
+                   DoomApp.callbacks(), %DoomAppState{})
+  }
+
+end

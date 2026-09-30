@@ -1,0 +1,112 @@
+load("kc3/data.kc3")
+load("tests/engine_stub.kc3")
+load("kc3/game.kc3")
+
+defmodule MotionCheck do
+
+  def t = fn (ok, label) {
+    if ok do
+      (U64) 0
+    else
+      puts("FAIL #{label}")
+      (U64) 1
+    end
+  }
+
+  def updates = fn (s, n) {
+    i = (Uw) 0
+    while (i < n) do
+      s = Doom.update(s, (F64) 0.016)
+      i = (Uw) (i + 1)
+    end
+    s
+  }
+
+  def near = fn (a, b) {
+    DoomMath.fabs(a - b) < (F64) 0.0000001
+  }
+
+end
+
+fails = (U64) 0
+
+s = Doom.init((U32) 400, (U32) 250)
+a0 = s.player.a
+s = Doom.motion(s, (S64) 120, (S64) 90)
+fails = (U64) (fails + MotionCheck.t((s.player.a == a0) && (! s.mouse_on),
+                                     "1 title motion ignored"))
+
+s = MotionCheck.updates(s, (Uw) 40)
+s = Doom.button(s, (U8) 1, (S64) 0, (S64) 0)
+fails = (U64) (fails + MotionCheck.t((s.state == :play) && (! s.mouse_on),
+                                     "2 play fresh anchor"))
+
+a0 = s.player.a
+s = Doom.motion(s, (S64) 200, (S64) 100)
+fails = (U64) (fails + MotionCheck.t((s.player.a == a0) && s.mouse_on &&
+                                     (s.mouse_x == (F64) 200.0),
+                                     "3 first event anchors"))
+
+s = Doom.motion(s, (S64) 250, (S64) 140)
+da = s.player.a - a0
+fails = (U64) (fails + MotionCheck.t(MotionCheck.near(da, (F64) 50.0 *
+                                                          DoomConfig.mouse),
+                                     "4 delta times sensitivity"))
+fails = (U64) (fails + MotionCheck.t(s.mouse_x == (F64) 250.0,
+                                     "4 anchor updated"))
+
+s = Doom.motion(s, (S64) 150, (S64) 40)
+da = s.player.a - a0
+fails = (U64) (fails + MotionCheck.t(MotionCheck.near(da, (F64) -50.0 *
+                                                           DoomConfig.mouse),
+                                     "5 negative direction"))
+
+a1 = s.player.a
+s = Doom.key(s, (U32) 112)
+fails = (U64) (fails + MotionCheck.t((s.state == :pause) && (! s.mouse_on),
+                                     "6 pause resets anchor"))
+s = Doom.motion(s, (S64) 10, (S64) 10)
+fails = (U64) (fails + MotionCheck.t((s.player.a == a1) && (! s.mouse_on),
+                                     "6 pause motion ignored"))
+s = MotionCheck.updates(s, (Uw) 40)
+s = Doom.button(s, (U8) 1, (S64) 0, (S64) 0)
+fails = (U64) (fails + MotionCheck.t(s.state == :play, "6 resume"))
+s = Doom.motion(s, (S64) 300, (S64) 10)
+fails = (U64) (fails + MotionCheck.t((s.player.a == a1) && s.mouse_on,
+                                     "6 re-anchor after resume"))
+
+p = s.player
+s = %DoomState{s | player: %DoomPlayer{p | hp: (F64) 1.0, armor: (F64) 0.0}}
+s = DoomGame.hurt_player(s, (F64) 10.0)
+fails = (U64) (fails + MotionCheck.t((s.state == :dead) && (! s.mouse_on),
+                                     "7 death resets anchor"))
+s = Doom.motion(s, (S64) 500, (S64) 0)
+fails = (U64) (fails + MotionCheck.t(! s.mouse_on, "7 dead motion ignored"))
+s = MotionCheck.updates(s, (Uw) 40)
+s = Doom.button(s, (U8) 1, (S64) 0, (S64) 0)
+fails = (U64) (fails + MotionCheck.t((s.state == :play) && (! s.mouse_on),
+                                     "7 restart"))
+a2 = s.player.a
+s = Doom.motion(s, (S64) 400, (S64) 0)
+fails = (U64) (fails + MotionCheck.t((s.player.a == a2) && s.mouse_on,
+                                     "7 re-anchor after restart"))
+
+s = DoomGame.set_state(s, :inter)
+s = MotionCheck.updates(s, (Uw) 40)
+s = Doom.button(s, (U8) 1, (S64) 0, (S64) 0)
+fails = (U64) (fails + MotionCheck.t((s.state == :play) &&
+                                     (s.level.li == (Uw) 1) &&
+                                     (! s.mouse_on),
+                                     "8 next level resets anchor"))
+
+s = DoomGame.set_state(s, :win)
+s = MotionCheck.updates(s, (Uw) 40)
+s = Doom.button(s, (U8) 1, (S64) 0, (S64) 0)
+fails = (U64) (fails + MotionCheck.t((s.state == :title) && (! s.mouse_on),
+                                     "9 win to title resets anchor"))
+
+if (fails == (U64) 0) do
+  puts("motion_test: OK")
+else
+  puts("motion_test: #{fails} FAIL")
+end
