@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>kc3_doom — visite guidée du code source</title>
+<meta name="description" content="Visite du code de kc3_doom : logique de jeu et orchestration en kc3, backend de rendu natif en C.">
+<style>
+:root{
+  color-scheme:dark;
+  --bg:#141518;
+  --bg2:#1b1d21;
+  --bg3:#23262b;
+  --line:#33373e;
+  --ink:#ece8e1;
+  --dim:#a7a49d;
+  --or:#ff8a3d;
+  --cy:#4fd1d9;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:4.5rem}
+body{margin:0;background:var(--bg);color:var(--ink);font:1.0625rem/1.65 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:var(--cy);text-underline-offset:.18em}
+a:hover{color:#8ff0f5}
+:focus-visible{outline:3px solid var(--or);outline-offset:3px;border-radius:3px}
+code,pre,kbd{font-family:var(--mono)}
+code{font-size:.9em;background:var(--bg3);padding:.08em .35em;border-radius:4px}
+.wrap{max-width:62rem;margin:0 auto;padding:0 1.25rem}
+.skip{position:absolute;left:-999px;top:0;background:var(--or);color:#111;padding:.6rem 1rem;z-index:20}
+.skip:focus{left:0}
+
+nav.top{position:sticky;top:0;z-index:10;background:rgba(20,21,24,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+nav.top .wrap{display:flex;align-items:center;gap:1.25rem;overflow-x:auto;white-space:nowrap;padding-top:.6rem;padding-bottom:.6rem;scrollbar-width:thin}
+nav.top strong{font-size:.85rem;letter-spacing:.06em;color:var(--or);text-transform:uppercase}
+nav.top a{font-size:.88rem;color:var(--dim);text-decoration:none;padding:.15rem 0;border-bottom:2px solid transparent}
+nav.top a:hover,nav.top a[aria-current="true"]{color:var(--ink);border-bottom-color:var(--cy)}
+
+header.hero{padding:clamp(3rem,9vw,7rem) 0 clamp(2.5rem,6vw,4.5rem);border-bottom:1px solid var(--line)}
+.kicker{font:600 .85rem var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--or);margin:0 0 1.25rem}
+h1{font-size:clamp(2.6rem,8.5vw,6rem);line-height:1;letter-spacing:-.035em;margin:0 0 1.75rem;font-weight:800}
+h1 em{font-style:normal;color:var(--cy)}
+h1 span{color:var(--or)}
+.lead{font-size:clamp(1.15rem,2.4vw,1.5rem);line-height:1.5;max-width:44rem;color:#d8d4cc;margin:0}
+.lead b{color:var(--ink)}
+
+section{padding:clamp(3rem,7vw,5.5rem) 0;border-bottom:1px solid var(--line)}
+.num{font:600 .9rem var(--mono);color:var(--or);letter-spacing:.08em}
+h2{font-size:clamp(1.9rem,5vw,3.25rem);line-height:1.08;letter-spacing:-.025em;margin:.35rem 0 1.25rem;font-weight:800}
+h3{font-size:1.2rem;margin:2rem 0 .5rem;letter-spacing:-.01em}
+p{margin:0 0 1rem;max-width:45rem}
+.cols{display:grid;gap:2rem;grid-template-columns:1fr 1fr}
+.note{border-left:3px solid var(--or);background:var(--bg2);padding:.9rem 1.1rem;margin:1.5rem 0;max-width:45rem;border-radius:0 6px 6px 0}
+.note p{margin:0}
+.tag{display:inline-block;font:700 .72rem var(--mono);letter-spacing:.05em;padding:.12rem .5rem;border-radius:999px;border:1px solid;vertical-align:.1em}
+.tag.k{color:var(--cy);border-color:var(--cy)}
+.tag.c{color:var(--or);border-color:var(--or)}
+
+.bar{display:flex;height:3.2rem;border-radius:8px;overflow:hidden;margin:1.5rem 0 .6rem;font-weight:700;font-size:1.05rem;max-width:45rem}
+.bar div{display:flex;align-items:center;padding:0 1rem;color:#101113;white-space:nowrap}
+.bar .k{background:var(--cy);width:32.6%}
+.bar .c{background:var(--or);width:67.4%}
+.small{font-size:.88rem;color:var(--dim);max-width:45rem}
+
+figure{margin:2rem 0}
+figcaption{font-size:.88rem;color:var(--dim);margin-top:.6rem;max-width:45rem}
+svg{max-width:100%;height:auto;display:block}
+svg text{font-family:var(--sans)}
+svg .m{font-family:var(--mono)}
+
+pre{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:1rem 1.15rem;overflow-x:auto;font-size:.86rem;line-height:1.55;margin:1rem 0}
+pre code{background:none;padding:0;font-size:inherit}
+.src{font:.82rem var(--mono);color:var(--dim);margin:1.25rem 0 -.5rem}
+
+.tools{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;margin:1.5rem 0}
+.js-only{display:none}
+.js .js-only{display:flex}
+button,input[type=search]{font:inherit;font-size:.92rem;background:var(--bg2);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:.45rem 1rem;cursor:pointer}
+input[type=search]{cursor:text;border-radius:8px;min-width:14rem;flex:1;max-width:22rem}
+button:hover{border-color:var(--dim)}
+button[aria-pressed="true"]{background:var(--ink);color:#111;border-color:var(--ink)}
+.count{font-size:.88rem;color:var(--dim)}
+
+.files{display:grid;gap:1rem;grid-template-columns:repeat(auto-fill,minmax(19rem,1fr));margin-top:1rem}
+.file{background:var(--bg2);border:1px solid var(--line);border-top:3px solid var(--or);border-radius:8px;padding:1.1rem 1.2rem}
+.file[data-lang="kc3"]{border-top-color:var(--cy)}
+.file[hidden]{display:none}
+.file h3{margin:0 0 .15rem;font:700 1rem var(--mono)}
+.file .meta{font-size:.82rem;color:var(--dim);margin:0 0 .6rem}
+.file p{font-size:.95rem;margin:0 0 .6rem}
+.file .sym{font:.8rem var(--mono);color:var(--dim)}
+.file .why{font-size:.9rem;color:#d8d4cc}
+.file .why b{color:var(--ink)}
+
+.stepper{display:grid;grid-template-columns:1fr;gap:1.5rem;margin-top:1.5rem;align-items:start}
+.steps{list-style:none;margin:0;padding:0;counter-reset:s}
+.step{counter-increment:s;border-left:2px solid var(--line);padding:.15rem 0 .15rem 1rem;margin:0}
+.step .st{all:unset;display:block;cursor:pointer;font-size:.95rem;color:var(--dim);padding:.4rem .4rem;border-radius:4px;width:100%}
+.step .st::before{content:counter(s) ". ";font-family:var(--mono);color:var(--dim)}
+.step .st:hover{color:var(--ink)}
+.step .st:focus-visible{outline:3px solid var(--or)}
+.step.k{border-left-color:var(--cy)}
+.step.c{border-left-color:var(--or)}
+.step .body{font-size:.98rem;padding:.5rem .4rem .9rem;color:#d8d4cc}
+.step .body p{margin:0 0 .6rem}
+.js .stepper{grid-template-columns:minmax(0,17rem) 1fr}
+.js .step .body{display:none}
+.js .step.on{background:var(--bg2)}
+.js .step.on .st{color:var(--ink);font-weight:700}
+.js .panel{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:1.25rem 1.4rem;min-height:14rem}
+.js .panel h3{margin-top:0}
+.panel{display:none}
+.js .panel{display:block}
+.stepnav{display:none;gap:.5rem;margin-top:1rem}
+.js .stepnav{display:flex}
+
+table{border-collapse:collapse;width:100%;max-width:52rem;font-size:.95rem;margin:1rem 0}
+th,td{text-align:left;padding:.65rem .8rem;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--dim)}
+.tw{overflow-x:auto}
+
+details{background:var(--bg2);border:1px solid var(--line);border-radius:8px;margin:1rem 0;max-width:52rem}
+summary{cursor:pointer;padding:.85rem 1.1rem;font-weight:600;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"+";display:inline-block;width:1.2rem;color:var(--or);font-family:var(--mono)}
+details[open] summary::before{content:"−"}
+details>div{padding:0 1.1rem 1rem}
+details>div p{max-width:none}
+
+.road{display:grid;gap:1rem;grid-template-columns:repeat(4,1fr);list-style:none;padding:0;margin:1.5rem 0;counter-reset:r}
+.road li{counter-increment:r;background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:1.1rem;font-size:.95rem}
+.road li::before{content:counter(r);display:block;font:800 2.6rem/1 var(--sans);color:var(--or);margin-bottom:.5rem}
+.road b{display:block;font-size:1.05rem;margin-bottom:.3rem}
+.road span{color:var(--dim)}
+
+footer{padding:2.5rem 0 4rem;color:var(--dim);font-size:.92rem}
+footer ul{padding-left:1.1rem;margin:.5rem 0}
+
+@media (max-width:820px){
+  .cols{grid-template-columns:1fr}
+  .stepper,.js .stepper{grid-template-columns:1fr}
+  .road{grid-template-columns:1fr 1fr}
+}
+@media (max-width:520px){
+  body{font-size:1rem}
+  .bar div{font-size:.78rem;padding:0 .55rem}
+  .road{grid-template-columns:1fr}
+  .files{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+
+@media print{
+  :root{color-scheme:light;--bg:#fff;--bg2:#fff;--bg3:#eee;--line:#bbb;--ink:#111;--dim:#444;--or:#b3470a;--cy:#0a6b72}
+  body{background:#fff;color:#111;font-size:10.5pt}
+  nav.top,.tools,.stepnav,.skip{display:none}
+  a{color:#111;text-decoration:underline}
+  section{padding:1.2rem 0;break-inside:auto}
+  h2,h3{break-after:avoid}
+  pre,.file,.step,figure,details{break-inside:avoid}
+  .js .step .body,.js .panel{display:block}
+  .js .panel,.panel{display:none}
+  .stepper,.js .stepper{grid-template-columns:1fr}
+  .file[hidden]{display:block}
+  .bar div{color:#111}
+  .wrap{max-width:none}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Aller au contenu</a>
+<nav class="top" aria-label="Sections">
+<div class="wrap">
+<strong>kc3_doom</strong>
+<a href="#pitch">Pitch</a>
+<a href="#repartition">Répartition</a>
+<a href="#architecture">Architecture</a>
+<a href="#frame">Une frame</a>
+<a href="#pont">Le pont</a>
+<a href="#jeu">Le jeu</a>
+<a href="#build">Build et limites</a>
+<a href="#suite">Feuille de route</a>
+</div>
+</nav>
+
+<header class="hero">
+<div class="wrap">
+<p class="kicker">Visite du code source · 30 septembre 2026</p>
+<h1>La logique en <em>kc3</em>,<br>le rendu en <span>C</span>.</h1>
+<p class="lead">Refaire un jeu inspiré de Doom en kc3 : <b>les règles du jeu et le pilotage de l'application sont écrits en kc3</b>. Le C apporte aujourd'hui le raycaster, les dessins et la liaison avec le système. Une visite des deux côtés du moteur.</p>
+</div>
+</header>
+
+<main id="main">
+
+<section id="pitch">
+<div class="wrap">
+<span class="num">01</span>
+<h2>Le pitch, sans détour</h2>
+<p>Trois niveaux, des ennemis avec IA, des armes, des portes et un boss. Les règles — déplacer le joueur, tirer, infliger des dégâts — vivent dans les fichiers <code>.kc3</code> chargés au démarrage. kc3 choisit aussi les callbacks et l'arrêt sur Échap. Le C calcule la géométrie, dessine et transmet les événements du système.</p>
+<p>Le fichier <code>kmx_doom.html</code> est un prototype historique de référence, pas la définition du projet. L'objectif est un jeu natif dont les décisions vivent en kc3, pas une conversion du HTML ni un port officiel du moteur Doom. Cette page est la présentation du code ; elle n'exécute pas le jeu.</p>
+<p>La frontière actuelle tient aux choix de départ et aux coûts mesurés. Le handoff rapporte environ 4,3 µs pour un appel kc3 vide dans son microbenchmark. Ce n'est pas le coût de toute fonction : son travail s'ajoute à cet appel. Les boucles de rendu restent donc natives, tandis que les règles sont exprimées en kc3.</p>
+<div class="note"><p><b>À retenir.</b> Le C actuel est en partie un choix de départ, pas une nécessité. Les textures et le HUD sont les premiers candidats à migrer en kc3.</p></div>
+</div>
+</section>
+
+<section id="repartition">
+<div class="wrap">
+<span class="num">02</span>
+<h2>Qui fait quoi, fichier par fichier</h2>
+<p>Mesure faite le 30 septembre 2026 : lignes non vides et non commentées.</p>
+<div class="bar" role="img" aria-label="32,6 % kc3, 67,4 % C"><div class="k">kc3 · 32,6 %</div><div class="c">C · 67,4 %</div></div>
+<p class="small">Sources <code>src/*.[ch]</code> : 2 935 lignes ; <code>kc3/*.kc3</code> : 1 419 ; total 4 354. Les en-têtes C et les déclarations <code>cfn</code> sont comptés. Sont exclus : tests, fichiers générés <code>.kc3c</code>, runtime, HTML et JS d'origine. C'est une mesure de taille de source, pas de temps CPU ni de part de fonctionnalités. Le runtime kc3 et la bibliothèque <code>window</code> (Cairo/XCB) sont eux aussi en C, réutilisés tels quels et non comptés.</p>
+
+<div class="tools js-only" role="group" aria-label="Filtrer les fichiers">
+<button type="button" data-f="all" aria-pressed="true">Tous</button>
+<button type="button" data-f="kc3" aria-pressed="false">kc3</button>
+<button type="button" data-f="c" aria-pressed="false">C</button>
+<input type="search" id="q" placeholder="Filtrer : cast, textures, cfn…" aria-label="Filtrer par mot-clé">
+<span class="count" id="cnt" aria-live="polite"></span>
+</div>
+
+<div class="files" id="files">
+<article class="file" data-lang="c">
+<h3><a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/src/kmx_doom.c">src/kmx_doom.c</a></h3>
+<p class="meta"><span class="tag c">C</span> 103 lignes · lanceur</p>
+<p>Initialise kc3, charge les six modules dans l'ordre, accepte <code>--load fichier.kc3</code>, puis appelle <code>DoomApp.main</code>.</p>
+<p class="sym">main · kmx_doom_load_file · kmx_doom_main</p>
+<p class="why"><b>Pourquoi C :</b> le jeu utilise un lanceur natif pour démarrer l'interpréteur et exporter les symboles des <code>cfn</code>. C'est son montage actuel, pas une obligation de tout programme kc3.</p>
+</article>
+<article class="file" data-lang="c">
+<h3><a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/src/window_binding.c">src/window_binding.c</a> <a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/src/window_binding.h">.h</a></h3>
+<p class="meta"><span class="tag c">C</span> 297 + 21 lignes · adaptateur</p>
+<p>Relie le backend Cairo/XCB aux callbacks kc3 : transporte les événements, calcule le temps écoulé monotone, valide chaque retour, garde l'état kc3 comme <code>s_tag</code> opaque, nettoie.</p>
+<p class="sym">kmx_doom_window_run</p>
+<p class="why"><b>Pourquoi C :</b> le backend fenêtre est du C ; l'adaptateur parle ses structures.</p>
+</article>
+<article class="file" data-lang="c">
+<h3><a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/src/bridge.c">src/bridge.c</a> <a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/src/bridge.h">.h</a></h3>
+<p class="meta"><span class="tag c">C</span> 529 + 32 lignes · pont</p>
+<p>Primitives natives appelables depuis kc3 : init et nettoyage du moteur, validation du tuple de vue, dessin, plus les requêtes de géométrie.</p>
+<p class="sym">kmx_doom_engine_init · _clean · _draw · kmx_doom_los · _cast · _blocked · _grid_load/set/get</p>
+<p class="why"><b>Pourquoi C :</b> c'est la frontière même : elle lit des <code>s_tag</code> et pilote le moteur.</p>
+</article>
+<article class="file" data-lang="c">
+<h3><a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/src/engine.c">src/engine.c</a> <a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/src/engine.h">.h</a></h3>
+<p class="meta"><span class="tag c">C</span> 423 + 127 lignes · moteur</p>
+<p>Raycaster, grille, collisions. Le repère logique fait 400×250 avec une vue raycastée de 400×200.</p>
+<p class="sym">ENGINE_W · ENGINE_H · ENGINE_VH · s_engine</p>
+<p class="why"><b>Pourquoi C :</b> des boucles sur chaque colonne de pixels et chaque case. En kc3, un <code>los</code> coûte ~475 µs contre un coût négligeable en C.</p>
+</article>
+<article class="file" data-lang="c">
+<h3><a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/src/textures.c">src/textures.c</a></h3>
+<p class="meta"><span class="tag c">C</span> 993 lignes · textures</p>
+<p>47 textures procédurales dessinées avec Cairo, générateur mulberry32 identique à celui du JS.</p>
+<p class="sym">draw_boss · draw_floor_tile · …</p>
+<p class="why"><b>Pourquoi C :</b> choix de l'implémentation initiale. <b>Pas une contrainte :</b> générées une seule fois au chargement, donc le coût d'appel kc3 ne pèserait pas en jeu.</p>
+</article>
+<article class="file" data-lang="c">
+<h3><a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/src/hud.c">src/hud.c</a> <a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/src/hud.h">.h</a></h3>
+<p class="meta"><span class="tag c">C</span> 591 + 81 lignes · HUD</p>
+<p>Arme, visage, minimap, bulle de Thomas, écrans de titre et de fin. Dessine à partir du <code>s_hud</code> que le pont remplit depuis la Map kc3.</p>
+<p class="sym">s_hud</p>
+<p class="why"><b>Pourquoi C :</b> même héritage. Environ 60 à 150 primitives par frame : portable en kc3, coût à mesurer.</p>
+</article>
+<article class="file" data-lang="kc3">
+<h3><a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/kc3/game.kc3">kc3/game.kc3</a></h3>
+<p class="meta"><span class="tag k">kc3</span> 1 082 lignes · logique</p>
+<p>IA des mobs, tir, dégâts, portes, ramassages, projectiles, états, entrées clavier et souris, construction de la vue.</p>
+<p class="sym">Doom.init · update · view · key · button · motion · DoomGame.mob_step · fire · pellet · hurt_mob · move</p>
+<p class="why"><b>Pourquoi kc3 :</b> c'est la règle du jeu ; l'état est une valeur immuable qu'on transforme à chaque frame.</p>
+</article>
+<article class="file" data-lang="kc3">
+<h3><a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/kc3/data.kc3">kc3/data.kc3</a></h3>
+<p class="meta"><span class="tag k">kc3</span> 436 lignes · données</p>
+<p>Les trois niveaux (E1M1 libkc3, E1M2 httpd, E1M3 PROD), types de mobs, armes, astuces, identifiants de texture.</p>
+<p class="sym">DoomLevels · DoomTypes · DoomWeapons · DoomTex</p>
+<p class="why"><b>Pourquoi kc3 :</b> ce sont des valeurs, sans aucun intérêt à les figer dans un binaire.</p>
+</article>
+<article class="file" data-lang="kc3">
+<h3><a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/kc3/doom_app.kc3">kc3/doom_app.kc3</a></h3>
+<p class="meta"><span class="tag k">kc3</span> 81 lignes · application</p>
+<p>Titre, fenêtre 800×400, sept callbacks, pas de temps borné, séquence <code>update → view → draw</code>, arrêt sur Échap.</p>
+<p class="sym">DoomApp.main · on_render · callbacks · clamp</p>
+<p class="why"><b>Pourquoi kc3 :</b> c'est l'orchestration : le lot 07 l'a sortie du C.</p>
+</article>
+<article class="file" data-lang="kc3">
+<h3><a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/kc3/doom_app_state.kc3">doom_app_state</a> · <a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/kc3/doom_engine.kc3">doom_engine</a> · <a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/kc3/doom_window.kc3">doom_window</a></h3>
+<p class="meta"><span class="tag k">kc3</span> 6 + 21 + 5 lignes · colle</p>
+<p>L'état typé de l'application, la déclaration des <code>cfn</code> du moteur, celle de <code>DoomWindow.run</code>.</p>
+<p class="sym">DoomAppState · DoomEngine · DoomWindow</p>
+<p class="why"><b>Pourquoi kc3 :</b> ce sont les déclarations de la frontière, côté kc3.</p>
+</article>
+</div>
+<p class="small">Comptes bruts par fichier (lignes du fichier, non filtrées) : voir les cartes ci-dessus.</p>
+</div>
+</section>
+
+<section id="architecture">
+<div class="wrap">
+<span class="num">03</span>
+<h2>Architecture : deux mondes, une frontière</h2>
+<p>À gauche, ce qui se charge à l'exécution. À droite, ce qui est compilé. Le seul passage de l'un à l'autre : des <code>cfn</code> qui appellent des fonctions C, et des callbacks que le C appelle en retour.</p>
+
+<figure>
+<svg viewBox="0 0 760 400" role="img" aria-labelledby="ar-t ar-d">
+<title id="ar-t">Architecture kc3 et C</title>
+<desc id="ar-d">Le lanceur C charge les modules kc3. L'adaptateur fenêtre appelle les callbacks de DoomApp. DoomApp appelle Doom pour la logique et DoomEngine.draw vers le pont C, qui pilote moteur, textures et HUD.</desc>
+<defs>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#ece8e1"/></marker>
+</defs>
+<rect x="10" y="30" width="300" height="300" rx="10" fill="#1b1d21" stroke="#4fd1d9" stroke-width="2"/>
+<text x="26" y="58" fill="#4fd1d9" font-size="15" font-weight="700">kc3 · chargé à l'exécution</text>
+<rect x="30" y="80" width="260" height="56" rx="6" fill="#23262b"/>
+<text x="44" y="104" fill="#ece8e1" font-size="15" font-weight="700" class="m">DoomApp</text>
+<text x="44" y="124" fill="#a7a49d" font-size="12">callbacks, dt, update → view → draw</text>
+<rect x="30" y="150" width="260" height="56" rx="6" fill="#23262b"/>
+<text x="44" y="174" fill="#ece8e1" font-size="15" font-weight="700" class="m">Doom / DoomGame</text>
+<text x="44" y="194" fill="#a7a49d" font-size="12">IA, tir, dégâts, portes, vue</text>
+<rect x="30" y="220" width="260" height="42" rx="6" fill="#23262b"/>
+<text x="44" y="246" fill="#ece8e1" font-size="15" font-weight="700" class="m">data.kc3</text>
+<text x="140" y="246" fill="#a7a49d" font-size="12">niveaux, mobs, armes</text>
+<rect x="30" y="274" width="260" height="42" rx="6" fill="#23262b"/>
+<text x="44" y="300" fill="#ece8e1" font-size="15" font-weight="700" class="m">DoomEngine</text>
+<text x="160" y="300" fill="#a7a49d" font-size="12">déclarations cfn</text>
+
+<rect x="450" y="30" width="300" height="300" rx="10" fill="#1b1d21" stroke="#ff8a3d" stroke-width="2"/>
+<text x="466" y="58" fill="#ff8a3d" font-size="15" font-weight="700">C · compilé par make</text>
+<rect x="470" y="80" width="260" height="50" rx="6" fill="#23262b"/>
+<text x="484" y="103" fill="#ece8e1" font-size="15" font-weight="700" class="m">window_binding.c</text>
+<text x="484" y="120" fill="#a7a49d" font-size="12">événements, temps, état opaque</text>
+<rect x="470" y="142" width="260" height="50" rx="6" fill="#23262b"/>
+<text x="484" y="165" fill="#ece8e1" font-size="15" font-weight="700" class="m">bridge.c</text>
+<text x="484" y="182" fill="#a7a49d" font-size="12">validation, dessin, los / cast</text>
+<rect x="470" y="204" width="260" height="42" rx="6" fill="#23262b"/>
+<text x="484" y="230" fill="#ece8e1" font-size="15" font-weight="700" class="m">engine.c</text>
+<text x="570" y="230" fill="#a7a49d" font-size="12">raycaster, grille</text>
+<rect x="470" y="256" width="124" height="60" rx="6" fill="#23262b"/>
+<text x="482" y="282" fill="#ece8e1" font-size="14" font-weight="700" class="m">textures.c</text>
+<text x="482" y="302" fill="#a7a49d" font-size="12">47 textures</text>
+<rect x="606" y="256" width="124" height="60" rx="6" fill="#23262b"/>
+<text x="618" y="282" fill="#ece8e1" font-size="14" font-weight="700" class="m">hud.c</text>
+<text x="618" y="302" fill="#a7a49d" font-size="12">HUD, minimap</text>
+
+<path d="M470 108H292" fill="none" stroke="#ece8e1" stroke-width="2" marker-end="url(#ah)"/>
+<text x="380" y="98" fill="#ece8e1" font-size="12" text-anchor="middle">callbacks</text>
+<path d="M290 296H380V167H468" fill="none" stroke="#ece8e1" stroke-width="2" marker-end="url(#ah)"/>
+<text x="384" y="238" fill="#ece8e1" font-size="12" transform="rotate(-90 384 238)" text-anchor="middle">cfn</text>
+
+<rect x="10" y="350" width="740" height="40" rx="8" fill="none" stroke="#a7a49d" stroke-dasharray="6 5"/>
+<text x="380" y="375" fill="#a7a49d" font-size="13" text-anchor="middle">Réutilisés sans modification, non comptés : runtime libkc3 et bibliothèque window (Cairo/XCB)</text>
+</svg>
+<figcaption>Le lanceur <code>kmx_doom.c</code> (non dessiné) charge les modules de gauche puis appelle <code>DoomApp.main</code>.</figcaption>
+</figure>
+
+<details>
+<summary>En détail : les dimensions du rendu et de la fenêtre</summary>
+<div>
+<p>La fenêtre choisie par <code>DoomApp</code> fait 800×400. Le moteur travaille dans son propre repère logique de 400×250 (<code>ENGINE_W</code>, <code>ENGINE_H</code>), dont la vue raycastée fait 400×200 (<code>ENGINE_VH</code>). Le repère du moteur n'est donc pas « la fenêtre entière ». Ce schéma respecte les proportions relatives.</p>
+<svg viewBox="0 0 420 130" role="img" aria-labelledby="rc-t" style="max-width:26rem">
+<title id="rc-t">Fenêtre 800×400 à côté du repère logique 400×250 dont la vue raycastée est 400×200</title>
+<rect x="4" y="4" width="240" height="120" fill="#1b1d21" stroke="#a7a49d" stroke-width="2"/>
+<text x="124" y="68" fill="#ece8e1" font-size="13" text-anchor="middle" font-weight="700">fenêtre</text>
+<text x="124" y="86" fill="#a7a49d" font-size="12" text-anchor="middle" class="m">800×400</text>
+<rect x="272" y="14" width="120" height="60" fill="#23262b" stroke="#ff8a3d" stroke-width="2"/>
+<text x="332" y="40" fill="#ff8a3d" font-size="12" text-anchor="middle" font-weight="700">vue raycast</text>
+<text x="332" y="57" fill="#a7a49d" font-size="12" text-anchor="middle" class="m">400×200</text>
+<rect x="272" y="74" width="120" height="15" fill="none" stroke="#a7a49d" stroke-dasharray="4 3"/>
+<text x="332" y="112" fill="#a7a49d" font-size="12" text-anchor="middle" class="m">repère 400×250</text>
+</svg>
+</div>
+</details>
+</div>
+</section>
+
+<section id="frame">
+<div class="wrap">
+<span class="num">04</span>
+<h2>Une frame, pas à pas</h2>
+<p>Chaque frame traverse les deux mondes. Utilisez les boutons, ou les flèches du clavier une fois un pas sélectionné. Sans JavaScript, tous les pas sont affichés.</p>
+
+<div class="stepper" id="stepper">
+<ol class="steps" id="steps">
+<li class="step c"><button type="button" class="st">Événement XCB</button><div class="body"><p><span class="tag c">C</span> Un événement <code>EXPOSE</code> arrive du serveur X, capté par le backend Cairo/XCB existant.</p></div></li>
+<li class="step c"><button type="button" class="st">Binding générique</button><div class="body"><p><span class="tag c">C</span> <code>window_binding.c</code> calcule le temps écoulé monotone, récupère l'état opaque et appelle le callback <code>render</code> enregistré, avec <code>(app, window, dt)</code>.</p></div></li>
+<li class="step k"><button type="button" class="st">on_render</button><div class="body"><p><span class="tag k">kc3</span> <code>DoomApp.on_render</code> reprend la main et borne <code>dt</code> à l'intervalle 0 à 0,05 s avec <code>DoomApp.clamp</code>.</p></div></li>
+<li class="step k"><button type="button" class="st">Doom.update</button><div class="body"><p><span class="tag k">kc3</span> IA, projectiles, ramassages, timers. Pendant ce pas, la logique interroge le moteur C par <code>los</code>, <code>cast</code> et <code>blocked</code>.</p></div></li>
+<li class="step k"><button type="button" class="st">Doom.view</button><div class="body"><p><span class="tag k">kc3</span> Construit le tuple de vue : état, position, angle, identifiants des textures de sol et de plafond, brouillard, sprites, Map <code>hud</code>, liste <code>sfx</code>.</p></div></li>
+<li class="step k"><button type="button" class="st">cfn draw</button><div class="body"><p><span class="tag k">kc3</span> <code>DoomEngine.draw(w, v)</code> est une <code>cfn</code> : l'interpréteur résout le symbole C par <code>dlsym</code> sur l'exécutable lié avec <code>--export-dynamic</code>.</p></div></li>
+<li class="step c"><button type="button" class="st">Validation, raycast, blit, HUD</button><div class="body"><p><span class="tag c">C</span> <code>kmx_doom_engine_draw</code> valide ses arguments et le contexte Cairo, puis lance le raycasting, le blit et le HUD. La liste <code>sfx</code> est émise mais ignorée : il n'y a pas de son.</p></div></li>
+<li class="step k"><button type="button" class="st">Retour {true, app}</button><div class="body"><p><span class="tag k">kc3</span> <code>on_render</code> renvoie <code>{true, nouvel_app}</code>. L'adaptateur C conserve ce nouvel état et attend la frame suivante.</p></div></li>
+</ol>
+<div class="panel" id="panel" aria-live="polite"></div>
+</div>
+<div class="stepnav" id="stepnav">
+<button type="button" id="prev">← Précédent</button>
+<button type="button" id="next">Suivant →</button>
+</div>
+
+<div class="src">Source : <a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/kc3/doom_app.kc3">kc3/doom_app.kc3</a>, <code>on_render</code></div>
+<pre><code>def on_render = fn (a, w, dt) {
+  g = Doom.update(a.game, DoomApp.clamp(dt))
+  v = Doom.view(g)
+  ok = DoomEngine.draw(w, v)
+  if ok do
+    {true, %DoomAppState{a | game: g, frames: (U64) (a.frames + 1)}}
+  else
+    :error
+  end
+}</code></pre>
+<p><code>a</code> est l'état de l'application, <code>w</code> le pointeur de fenêtre, <code>dt</code> le temps écoulé. Le nouvel état est une copie de <code>a</code> avec le jeu mis à jour. Si le dessin échoue, <code>:error</code> fait échouer <code>DoomWindow.run</code>. Le pointeur de fenêtre ne doit pas être conservé au-delà de cet appel.</p>
+</div>
+</section>
+
+<section id="pont">
+<div class="wrap">
+<span class="num">05</span>
+<h2>Le pont, dans les deux sens</h2>
+<h3>kc3 vers C : la <code>cfn</code></h3>
+<div class="src">Source : <a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/kc3/doom_engine.kc3">kc3/doom_engine.kc3</a></div>
+<pre><code>def draw = cfn Bool "kmx_doom_engine_draw" (Ptr, Tag)</code></pre>
+<div class="src">Côté C : <a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/src/bridge.h">src/bridge.h</a></div>
+<pre><code>bool       kmx_doom_engine_draw (void **window, s_tag *view);</code></pre>
+<p>Le type de retour et la liste de types de la <code>cfn</code> décrivent la signature C. <code>Ptr</code> transporte la fenêtre, <code>Tag</code> transporte le tuple de vue tel quel : c'est le C qui le décode et le valide.</p>
+
+<h3>C vers kc3 : les callbacks</h3>
+<p>Dans l'autre sens, <code>DoomApp.callbacks()</code> renvoie une Map de sept fonctions, que <code>DoomWindow.run</code> transmet à l'adaptateur :</p>
+<p><code>load</code> · <code>render</code> · <code>key</code> · <code>button</code> · <code>motion</code> · <code>resize</code> · <code>unload</code></p>
+<p>Chacune reçoit <code>(app, window, …)</code> et retourne <code>{Bool, état}</code>. <code>false</code> demande un arrêt normal, par exemple Échap. <code>:error</code>, ou un retour mal formé, fait échouer <code>DoomWindow.run</code>. Le retour du callback <code>unload</code> est lui aussi validé.</p>
+
+<details>
+<summary>En détail : ce que le C conserve entre les callbacks</summary>
+<div>
+<p>L'état kc3 traverse le C sans être interprété : l'adaptateur le stocke comme un <code>s_tag</code> opaque et le rend au callback suivant. Le piège rencontré : <code>tag_init_copy</code> ne remet pas à zéro les champs de comptage et de verrouillage, il faut initialiser les <code>s_tag</code> temporaires à <code>{0}</code> avant copie (<a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/HANDOFF.md">HANDOFF.md</a>, section 7, point 11).</p>
+</div>
+</details>
+</div>
+</section>
+
+<section id="jeu">
+<div class="wrap">
+<span class="num">06</span>
+<h2>Le jeu : données, logique, moteur</h2>
+<p>Trois couches se parlent. <code>data.kc3</code> décrit : trois niveaux, les types de mobs, les armes. <code>game.kc3</code> décide : à chaque frame, il transforme l'état. Le moteur C répond aux questions de géométrie : « quelle distance jusqu'au mur ? », « cette case est-elle bloquée ? ».</p>
+
+<h3>Exemple 1 : un tir</h3>
+<p><code>DoomGame.fire</code> vérifie le délai et les munitions de l'arme choisie dans <code>DoomWeapons</code>, puis appelle <code>DoomGame.pellet</code> une fois par plomb. Chaque plomb demande au moteur la distance du premier mur, puis cherche en kc3 le mob touché devant.</p>
+<div class="src">Source : <a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/kc3/game.kc3">kc3/game.kc3</a>, <code>DoomGame.pellet</code> (extrait abrégé)</div>
+<pre><code>bd = DoomEngine.cast(px, py, dx, dy)
+...
+if found do
+  s = DoomGame.hurt_mob(s, best,
+                        w.dmin + DoomRand.rand() * (w.dmax - w.dmin))
+end</code></pre>
+<p><code>cast</code> est en C ; le choix de la cible et les dégâts sont en kc3.</p>
+
+<h3>Exemple 2 : une collision</h3>
+<div class="src">Source : <a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/kc3/game.kc3">kc3/game.kc3</a>, <code>DoomGame.move</code></div>
+<pre><code>def move = fn (x, y, mx, my, r) {
+  nx = if DoomEngine.blocked(x + mx, y, r) do x else x + mx end
+  ny = if DoomEngine.blocked(nx, y + my, r) do y else y + my end
+  {nx, ny}
+}</code></pre>
+<p>Chaque axe est testé séparément : on glisse le long des murs au lieu de s'arrêter. La règle est en kc3, le test de case bloquée en C.</p>
+
+<details>
+<summary>En détail : comment choisir ce qui reste natif</summary>
+<div>
+<p>Porter <code>mob_step</code> en C pourrait accélérer la logique, mais déplacerait les règles hors de kc3. Il faut d'abord profiler et comparer. Les chiffres historiques du <a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/HANDOFF.md">handoff</a> concernent des tests de logique et de vue sous kc3s ; ils ne constituent pas un benchmark de frame complète avec rendu, ni une promesse de FPS.</p>
+</div>
+</details>
+</div>
+</section>
+
+<section id="build">
+<div class="wrap">
+<span class="num">07</span>
+<h2>Build, tests, limites</h2>
+<pre><code>cd kc3_doom
+./configure
+make && make run
+sh tests/run_all.sh</code></pre>
+
+<h3>Ce que ça change de modifier un fichier</h3>
+<div class="tw">
+<table>
+<thead><tr><th>Vous modifiez</th><th>Il faut</th></tr></thead>
+<tbody>
+<tr><td><code>kc3/*.kc3</code></td><td>Relancer le jeu. Les fichiers sont chargés au démarrage, sans recompilation C.</td></tr>
+<tr><td><code>src/*.c</code>, <code>src/*.h</code></td><td>Relancer <code>make</code> : recompilation et édition de liens.</td></tr>
+<tr><td>Nouveau fichier <code>.kc3</code></td><td>Le charger depuis un module kc3 existant avec <code>load</code>, ou l'ajouter à la liste du lanceur. Seule cette seconde option demande de recompiler le C.</td></tr>
+</tbody>
+</table>
+</div>
+
+<details>
+<summary>Où modifier quoi ?</summary>
+<div class="tw"><table>
+<thead><tr><th>Votre idée</th><th>Point d'entrée</th></tr></thead>
+<tbody>
+<tr><td>Changer les caractéristiques d'une arme ou d'un ennemi</td><td><a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/kc3/data.kc3">data.kc3</a> : <code>DoomWeapons</code>, <code>DoomTypes</code></td></tr>
+<tr><td>Modifier l'IA ou les règles de tir</td><td><a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/kc3/game.kc3">game.kc3</a> : <code>mob_step</code>, <code>fire</code>, <code>pellet</code></td></tr>
+<tr><td>Régler la sensibilité de la souris</td><td><a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/kc3/game.kc3">game.kc3</a> : <code>DoomConfig.mouse</code></td></tr>
+<tr><td>Changer le titre ou la taille de fenêtre</td><td><a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/kc3/doom_app.kc3">doom_app.kc3</a> : <code>title</code>, <code>width</code>, <code>height</code></td></tr>
+<tr><td>Redessiner une texture ou le HUD</td><td><a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/src/textures.c">textures.c</a>, <a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/src/hud.c">hud.c</a> : encore natifs, à recompiler</td></tr>
+</tbody>
+</table></div>
+</details>
+
+<h3>Tests</h3>
+<p>Le 30 septembre : les six tests historiques (<code>engine</code>, <code>textures</code>, <code>hud</code>, <code>data</code>, <code>game</code>, <code>view_check</code>), plus <code>motion_test</code>, <code>app_test</code> et les tests natifs de cycle de vie et de contrat, sont passés. Ils tournent sans affichage : ce n'est pas une validation interactive complète. Un build AddressSanitizer a passé les scénarios natifs le 29 septembre, avec la détection de fuites désactivée. Détails : <a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/tasks/REPORT-07.md">tasks/REPORT-07.md</a>.</p>
+
+<h3>Limites connues</h3>
+<ul>
+<li>La souris est absolue et bornée par la fenêtre : ni capture ni mode relatif.</li>
+<li>Pas de relâchement de touche : le déplacement passe par l'autorepeat.</li>
+<li>Pas de son : kc3 émet la liste <code>sfx</code>, le C l'ignore.</li>
+<li>Textures et HUD restent en C.</li>
+<li>La validation interactive sur bureau reste à faire.</li>
+</ul>
+</div>
+</section>
+
+<section id="suite">
+<div class="wrap">
+<span class="num">08</span>
+<h2>Feuille de route</h2>
+<ol class="road">
+<li><b>Sortir de Cairo</b><span>Priorité haute : auditer puis prototyper le backend EGL et son API de dessin, sans déplacer la logique hors de kc3.</span></li>
+<li><b>Textures en kc3</b><span>À coordonner avec le backend GPU. Initialisation unique, comparaison visuelle et des données avec la référence C.</span></li>
+<li><b>HUD en kc3</b><span>À adapter au futur backend GPU. Mesurer le coût avant de conclure.</span></li>
+<li><b>Backend d'entrées</b><span>Relâchement de touche et souris relative, dans une branche kc3 dédiée.</span></li>
+<li><b>Optimisations du runtime</b><span>Seulement après profilage, avec mesure avant/après.</span></li>
+</ol>
+<p class="small">Les règles de travail sont dans <a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/AGENTS.md">AGENTS.md</a> ; l'état complet et les pistes chiffrées dans <a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/HANDOFF.md">HANDOFF.md</a>, section 8.</p>
+<div class="note"><p><b>Nouvelle priorité : sortir de Cairo.</b> Le prochain cadrage porte sur un rendu GPU avec EGL privilégié pour les contextes et surfaces, OpenGL ES à évaluer et chemin OpenGL de repli si nécessaire. Le jeu actuel reste sous Cairo : migration non implémentée. Le portage textures/HUD devra viser ce backend. Voir <a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/tasks/09-rendu-egl.md">le lot EGL</a> et la <a href="https://www.khronos.org/egl/">distinction entre EGL et API de rendu</a>.</p></div>
+</div>
+</section>
+</main>
+
+<footer>
+<div class="wrap">
+<p>Pour aller plus loin :</p>
+<p class="small">© 2022–2026 kmx.io · © 2026 KyotoVania — <a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/LICENSE">Licence</a> · <a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/NOTICE">Mentions</a> · <a href="https://github.com/KyotoVania/kc3_doom">GitHub</a></p>
+<ul>
+<li><a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/HANDOFF.md">HANDOFF.md</a> : état, contrats, mesures, pièges</li>
+<li><a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/tasks/REPORT-07.md">tasks/REPORT-07.md</a> : lot 07, sorties des tests</li>
+<li><a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/tasks/README.md">tasks/README.md</a> : tuple de vue</li>
+<li><a href="https://github.com/KyotoVania/kc3_doom/blob/c5dee6ae76d375e73175cacb731b5d7490fd3c4d/PLAN.md">PLAN.md</a> : plan initial</li>
+</ul>
+</div>
+</footer>
+
+<script>
+(function(){
+  var d=document,root=d.documentElement;
+  root.className+=" js";
+
+  var steps=[].slice.call(d.querySelectorAll("#steps .step"));
+  var panel=d.getElementById("panel");
+  var cur=0;
+  function show(i,focus){
+    cur=(i+steps.length)%steps.length;
+    steps.forEach(function(s,n){
+      var b=s.querySelector(".st");
+      if(n===cur){s.classList.add("on");b.setAttribute("aria-current","step")}
+      else{s.classList.remove("on");b.removeAttribute("aria-current")}
+    });
+    panel.innerHTML="<h3>"+(cur+1)+" / "+steps.length+" · "+steps[cur].querySelector(".st").textContent+"</h3>"+steps[cur].querySelector(".body").innerHTML;
+    if(focus)steps[cur].querySelector(".st").focus();
+  }
+  steps.forEach(function(s,n){
+    s.querySelector(".st").addEventListener("click",function(){show(n)});
+    s.querySelector(".st").addEventListener("keydown",function(e){
+      if(e.key==="ArrowDown"||e.key==="ArrowRight"){e.preventDefault();show(n+1,true)}
+      else if(e.key==="ArrowUp"||e.key==="ArrowLeft"){e.preventDefault();show(n-1,true)}
+      else if(e.key==="Home"){e.preventDefault();show(0,true)}
+      else if(e.key==="End"){e.preventDefault();show(steps.length-1,true)}
+    });
+  });
+  d.getElementById("prev").addEventListener("click",function(){show(cur-1)});
+  d.getElementById("next").addEventListener("click",function(){show(cur+1)});
+  d.getElementById("stepper").className+=" live";
+  show(0);
+
+  var cards=[].slice.call(d.querySelectorAll("#files .file"));
+  var btns=[].slice.call(d.querySelectorAll("[data-f]"));
+  var q=d.getElementById("q"),cnt=d.getElementById("cnt");
+  var lang="all";
+  function filter(){
+    var t=q.value.trim().toLowerCase(),n=0;
+    cards.forEach(function(c){
+      var ok=(lang==="all"||c.getAttribute("data-lang")===lang)&&(!t||c.textContent.toLowerCase().indexOf(t)>-1);
+      c.hidden=!ok;
+      if(ok)n++;
+    });
+    cnt.textContent=n+" / "+cards.length+" entrées";
+  }
+  btns.forEach(function(b){
+    b.addEventListener("click",function(){
+      lang=b.getAttribute("data-f");
+      btns.forEach(function(o){o.setAttribute("aria-pressed",o===b?"true":"false")});
+      filter();
+    });
+  });
+  q.addEventListener("input",filter);
+  filter();
+
+  var links=[].slice.call(d.querySelectorAll("nav.top a"));
+  if("IntersectionObserver" in window){
+    var io=new IntersectionObserver(function(es){
+      es.forEach(function(e){
+        if(e.isIntersecting){
+          links.forEach(function(a){
+            if(a.getAttribute("href")==="#"+e.target.id)a.setAttribute("aria-current","true");
+            else a.removeAttribute("aria-current");
+          });
+        }
+      });
+    },{rootMargin:"-45% 0px -50% 0px"});
+    [].slice.call(d.querySelectorAll("section[id]")).forEach(function(s){io.observe(s)});
+  }
+
+  window.addEventListener("beforeprint",function(){
+    [].slice.call(d.querySelectorAll("details")).forEach(function(x){x.open=true});
+  });
+})();
+</script>
+</body>
+</html>

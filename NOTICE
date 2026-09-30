@@ -1,0 +1,17 @@
+kc3_doom
+
+Copyright from 2022 to 2026 kmx.io <contact@kmx.io>
+Copyright 2026 KyotoVania
+
+The root LICENSE applies to the project code, tests, scripts,
+documentation and HTML files, including files without individual
+license headers, unless a file explicitly states otherwise.
+
+Existing copyright and permission notices must be preserved.
+Third-party dependencies retain their own licenses and ownership.
+This notice does not claim ownership of kc3, Cairo, XCB or other
+third-party dependencies.
+
+Doom is referenced as an inspiration. This project is not affiliated
+with or endorsed by its rights holders and is not an official port
+of the Doom engine.
