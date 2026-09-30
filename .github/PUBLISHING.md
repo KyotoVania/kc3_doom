@@ -6,7 +6,24 @@ Dépôt public : [KyotoVania/kc3_doom](https://github.com/KyotoVania/kc3_doom).
 Le propriétaire a autorisé sa création et la publication du code. La licence racine
 reprend le texte de permission existant, avec les mentions kmx.io et KyotoVania ;
 voir [LICENSE](../LICENSE) et [NOTICE](../NOTICE). Les vérifications ci-dessous restent
-utiles pour les publications futures. L'activation de Pages est une étape distincte.
+utiles pour les publications futures.
+
+## Deux branches distinctes
+
+| Branche | Contenu | Modification |
+|---|---|---|
+| `master` | Jeu, tests, documentation, présentation HTML éditable et outils | Développement normal |
+| `gh-pages` | `index.html`, `.nojekyll`, `LICENSE`, `NOTICE` uniquement | Génération automatique après les tests |
+
+`gh-pages` démarre sans parent commun avec `master`, puis conserve son propre historique
+de publications. Aucun force-push. Ne pas modifier directement cette branche : éditer
+`presentation-code.html` sur `master`. Les liens source sont figés sur le commit du jeu
+ayant servi à générer le site. Aucun source du jeu, dump, journal ou binaire n'est copié.
+
+Après les tests, la CI génère le site, met à jour `gh-pages` avec `tools/publish_site.sh`,
+puis relit et déploie le commit de cette branche. Le test de publication utilise un dépôt
+bare temporaire : création isolée, idempotence, mise à jour, protection de l'index courant
+et refus des fichiers inattendus.
 
 ## Avant le premier push
 
@@ -41,15 +58,22 @@ Ouvrir `_site/index.html`. Le répertoire de sortie doit être neuf ; le génér
 
 ## Activer Pages après création du dépôt
 
-1. Dans **Settings → Pages**, choisir **GitHub Actions** comme source.
+1. Dans **Settings → Pages**, choisir **GitHub Actions** comme source. Le contenu déployé
+   provient bien de `gh-pages`, mais le déploiement est explicite : un push avec le jeton
+   automatique ne déclenche pas seul un build Pages par branche. Cela évite d'ajouter un
+   jeton personnel. Voir la [documentation GitHub](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site).
 2. Dans **Settings → Environments → github-pages**, limiter les déploiements à la branche par défaut.
 3. Dans **Settings → Secrets and variables → Actions → Variables**, créer `PUBLISH_PAGES` avec la valeur `true`. Aucun secret personnel n'est nécessaire au workflow.
 4. Relancer **CI** depuis la branche par défaut, ou y pousser un changement autorisé.
 5. Vérifier l'URL rendue par le job **Publish presentation**, puis l'ajouter au champ Website du dépôt et au README. Ne pas inventer de badge vert avant ce contrôle.
 
-Le site publié contient seulement `index.html` et `.nojekyll`. Ses liens source pointent vers les fichiers GitHub à la révision exacte du déploiement. Le générateur ne copie ni l'arbre complet, ni la configuration locale, ni le prototype JS dans l'artefact public. En prévisualisation locale, seuls les fichiers source/documentation explicitement liés sont copiés.
+Le site publié contient seulement `index.html`, `.nojekyll`, `LICENSE` et `NOTICE`. Ses liens source pointent vers les fichiers GitHub à la révision exacte du déploiement. Le générateur ne copie ni l'arbre complet, ni la configuration locale, ni le prototype JS dans l'artefact public. En prévisualisation locale, seuls les fichiers source/documentation explicitement liés et les mentions sont copiés.
 
-Le workflow utilise les actions et permissions décrites dans la [documentation officielle GitHub Pages](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages). Les jobs de test sont en lecture seule ; seuls les déploiements disposent de `pages: write` et `id-token: write`. Dependabot propose mensuellement les mises à jour des actions.
+Le workflow utilise les actions et permissions décrites dans la [documentation officielle GitHub Pages](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages). Les jobs de test sont en lecture seule ; seul le job de publication dispose de `contents: write`, `pages: write` et `id-token: write`. Les pushes sur `gh-pages` sont exclus de la CI pour éviter une boucle. Dependabot propose mensuellement les mises à jour des actions.
+
+En cas d'échec, relancer CI sur le dernier commit de `master`. Si l'arbre généré est
+identique, aucun commit supplémentaire n'est créé. Désactiver `PUBLISH_PAGES` suspend
+les publications suivantes, sans supprimer le site existant ni son historique.
 
 ## Présentation GitHub proposée
 

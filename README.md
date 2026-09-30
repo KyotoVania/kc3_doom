@@ -15,13 +15,19 @@ et de mesure pour pousser du code réel en kc3 et, à terme, améliorer le runti
 [Dépôt GitHub](https://github.com/KyotoVania/kc3_doom) ·
 [GitHub Actions](https://github.com/KyotoVania/kc3_doom/actions/workflows/ci.yml)
 
+[Site de présentation](https://kyotovania.github.io/kc3_doom/) ·
+[Branche du site](https://github.com/KyotoVania/kc3_doom/tree/gh-pages)
+
 ## Positionnement
 
 `kmx_doom.html` (à la racine) est le **prototype JavaScript historique en un seul fichier**
 qui sert de référence fonctionnelle : comportements des mobs, armes, niveaux, HUD. La
 finalité du projet est le jeu natif kc3/C décrit ici, pas une page web. Le dépôt
-ne fait **pas tourner le jeu kc3 dans le navigateur** : le site prévu (GitHub Pages) publiera une
-présentation HTML et des liens vers les sources, rien de plus.
+ne fait **pas tourner le jeu kc3 dans le navigateur** : GitHub Pages publie une
+présentation HTML et des liens vers les sources, rien de plus. La branche `master`
+contient le jeu et la présentation éditable ; `gh-pages` contient uniquement le site
+généré et ses mentions de licence, avec un historique séparé. Après les tests, la CI
+met à jour cette branche puis publie exactement son contenu.
 
 ## État actuel
 
@@ -157,7 +163,7 @@ sans mesure avant/après.
 - [PLAN.md](PLAN.md) — plan historique, certains contrats ont évolué ;
 - [tasks/](tasks/) — fiches de lots et rapports ;
 - [presentation-code.html](presentation-code.html) — visite HTML du code ; sur GitHub,
-  ce lien affiche le source, ouvrir le fichier localement ou utiliser le futur site Pages ;
+  ce lien affiche le source, ouvrir le fichier localement ou utiliser le site Pages ;
 - [Publication GitHub et Pages](.github/PUBLISHING.md) — activation du site, périmètre CI
   et contrôles avant publication.
 

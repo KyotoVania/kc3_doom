@@ -6,6 +6,7 @@ src/*.o
 logs/
 tests/out/
 _site/
+_published/
 __pycache__/
 *.pyc
 .env

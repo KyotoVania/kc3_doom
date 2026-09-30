@@ -79,6 +79,8 @@ def build(root, output, repository=None, revision=None):
     output.mkdir(parents=True, exist_ok=False)
     (output / "index.html").write_text(source, encoding="utf-8")
     (output / ".nojekyll").touch()
+    for name in ("LICENSE", "NOTICE"):
+        shutil.copyfile(root / name, output / name)
     if not repository:
         for path in sorted(files):
             target = output / path

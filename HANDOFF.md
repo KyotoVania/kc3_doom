@@ -10,6 +10,7 @@ Objectif du projet : **refaire un jeu inspiré de Doom en kc3**, avec une place 
 - Le lot 07 est validé par les tests sans affichage ; une partie interactive reste à faire. Détails, sorties et limites : `tasks/REPORT-07.md`.
 - Lot 08 : README, contribution, modèles GitHub, CI C/site et workflow Pages préparés. Le dépôt public est désormais `https://github.com/KyotoVania/kc3_doom`. Licence et mentions harmonisées au nom de kmx.io et KyotoVania ; publication du code autorisée par le propriétaire. Voir `LICENSE`, `NOTICE`, `tasks/REPORT-08.md` (rapport historique) et `.github/PUBLISHING.md`. La CI n'inclut pas encore le build complet de kc3 sur un runner vierge.
 - Référence historique : `kmx_doom.html`, prototype JS en un seul fichier. Les numéros de ligne JS cités ici renvoient à ce fichier. `presentation-code.html` est la vitrine documentaire prévue pour GitHub Pages, pas une version navigateur du jeu kc3.
+- Publication du site : branche orpheline `gh-pages`, contenant uniquement `index.html`, `.nojekyll`, `LICENSE` et `NOTICE`. La CI de `master` génère puis pousse le site sans force-push et déploie le contenu de cette branche via Actions. Source éditable : `presentation-code.html` sur `master`. Site : `https://kyotovania.github.io/kc3_doom/`.
 - Toutes les phases de `PLAN.md` sont faites, sauf :
   - la phase 1 (patches `window/` : relâchement de touche, souris relative) ;
   - la phase 6 (son).

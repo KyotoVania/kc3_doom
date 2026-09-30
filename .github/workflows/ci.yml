@@ -2,6 +2,7 @@ name: CI
 
 on:
   push:
+    branches-ignore: [gh-pages]
   pull_request:
   workflow_dispatch:
 
@@ -10,7 +11,7 @@ permissions:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   native:
@@ -52,7 +53,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
-      contents: read
+      contents: write
       pages: write
       id-token: write
     concurrency:
@@ -64,15 +65,26 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          persist-credentials: false
+          persist-credentials: true
       - uses: actions/configure-pages@v5
       - run: python3 tools/build_site.py --output _site --repository "$SITE_REPOSITORY" --revision "$SITE_REVISION"
         env:
           SITE_REPOSITORY: ${{ github.repository }}
           SITE_REVISION: ${{ github.sha }}
+      - name: Update gh-pages branch
+        run: sh tools/publish_site.sh _site
+        env:
+          GIT_AUTHOR_NAME: github-actions[bot]
+          GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+      - name: Read published branch
+        run: |
+          mkdir _published
+          git archive FETCH_HEAD | tar -x -C _published
       - uses: actions/upload-pages-artifact@v4
         with:
-          path: _site
+          path: _published
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
